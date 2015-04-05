@@ -1,0 +1,3 @@
+useDynLib(RIM)
+exportPattern("^[[:alpha:]]+")
+importFrom(Rcpp, evalCpp)
