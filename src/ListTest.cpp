@@ -63,5 +63,33 @@ int main() {
   assert(l.lastNode() == listNode);
   assert(l.currentNode() == listNode);
   
+  // Testing joinWithPartition
+  
+  RIM:List l1 = List<int>();
+  RIM:List l2 = List<int>();
+  RIM:List partition = List<int>();
+  
+  l1.appendValue(1);
+  l1.appendValue(2);
+  l1.appendValue(3);
+  l1.appendValue(4);
+  l1.appendValue(5);
+  
+  l2.appendValue(6);
+  l2.appendValue(7);
+  l2.appendValue(8);
+  l2.appendValue(9);
+  
+  partition.appendValue(1);
+  
+  l1.joinWithPartition(l2, partition);
+  
+  l1.restart();
+  printf("%d,", l1.currentValue());
+  while(!l1.atEnd()) {
+    printf("%d,", l1.currentValue());
+  }
+  printf("\n");
+  
   return(0);
 }

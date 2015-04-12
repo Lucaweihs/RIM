@@ -1,3 +1,6 @@
+#ifndef RIM_List
+#define RIM_List
+
 #include"ListNode.cpp"
 #include<cstdlib>
 
@@ -91,5 +94,70 @@ namespace RIM {
         ListNode<T>* listNode = new ListNode<T>(value);
         appendNode(listNode);
       }
+      
+      void insertNodeAfterCurrent(ListNode<T>* listNode) {
+        listNode->next = current->next;
+        listNode->prev = current;
+        current->next->prev = listNode;
+        current->next = listNode;
+      }
+      
+      void insertNodeBeforeCurrent(ListNode<T>* listNode) {
+        listNode->next = current;
+        listNode->prev = current->prev;
+        current->prev->next = listNode;
+        current->prev = listNode;
+      }
+      
+      void joinWithPartition(List<T>* listToMerge, List<int>* partition) {
+        if(partition->length() > listToMerge->length()) {
+          std::exit(1);
+        }
+        partition->restart();
+        this->restart();
+        
+        int initialLength = this->length();
+        int lastPartitionNum = partition->currentValue();
+        int curPartitionNum = lastPartitionNum;
+        partition->next();
+        for(int i=0; i<initialLength-lastPartitionNum-1; i++) {
+          this->next();
+        }
+        
+        ListNode<int>* curNodeToMerge = listToMerge->sentinal->next;
+        ListNode<int>* nextNodeToMerge = listToMerge->sentinal->next->next;
+        if(curPartitionNum == initialLength) {
+          this->insertNodeBeforeCurrent(curNodeToMerge);
+        } else {
+          this->insertNodeAfterCurrent(curNodeToMerge);
+          this->next();
+        }
+        curNodeToMerge = nextNodeToMerge;
+        nextNodeToMerge = curNodeToMerge->next;
+        
+        while(curNodeToMerge != listToMerge->sentinal) {
+          curPartitionNum = partition->currentValue();
+          partition->next();
+          for(int i=0; i<lastPartitionNum - curPartitionNum; i++) {
+            this->next();
+          }
+          
+          if(curPartitionNum == initialLength) {
+            this->insertNodeBeforeCurrent(curNodeToMerge);
+          } else {
+            this->insertNodeAfterCurrent(curNodeToMerge);
+            this->next();
+          }
+          curNodeToMerge = nextNodeToMerge;
+          nextNodeToMerge = curNodeToMerge->next;
+          
+          lastPartitionNum = curPartitionNum;
+        }
+        listToMerge->sentinal->next = listToMerge->sentinal;
+        listToMerge->sentinal->prev = listToMerge->sentinal;
+        listToMerge->listLength = 0;
+      }
   };
 }
+
+#endif

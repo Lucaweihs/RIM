@@ -1,3 +1,6 @@
+#ifndef RIM_ListNode
+#define RIM_ListNode
+
 #include<stdio.h>
 
 namespace RIM {
@@ -20,3 +23,5 @@ namespace RIM {
       }
   };
 }
+
+#endif
