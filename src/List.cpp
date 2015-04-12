@@ -100,6 +100,7 @@ namespace RIM {
         listNode->prev = current;
         current->next->prev = listNode;
         current->next = listNode;
+        listLength += 1;
       }
       
       void insertNodeBeforeCurrent(ListNode<T>* listNode) {
@@ -107,6 +108,7 @@ namespace RIM {
         listNode->prev = current->prev;
         current->prev->next = listNode;
         current->prev = listNode;
+        listLength += 1;
       }
       
       void joinWithPartition(List<T>* listToMerge, List<int>* partition) {
@@ -115,17 +117,59 @@ namespace RIM {
         }
         partition->restart();
         this->restart();
+        listToMerge->restart();
         
         int initialLength = this->length();
-        int lastPartitionNum = partition->currentValue();
-        int curPartitionNum = lastPartitionNum;
-        partition->next();
+        int lastPartitionNum = initialLength;
+        int curPartitionNum = initialLength;
+        //int lastPartitionNum = partition->currentValue();
+        //int curPartitionNum = lastPartitionNum;
+        /*partition->next();
         for(int i=0; i<initialLength-lastPartitionNum-1; i++) {
           this->next();
-        }
+        }*/
         
         ListNode<int>* curNodeToMerge = listToMerge->sentinal->next;
-        ListNode<int>* nextNodeToMerge = listToMerge->sentinal->next->next;
+        ListNode<int>* nextNodeToMerge;
+        int k = 1;
+        
+        while(true) {
+          nextNodeToMerge = curNodeToMerge->next;
+          
+          if(k > partition->length()) {
+            curPartitionNum = -1;
+            while(!this->atEnd()) {
+              this->next();
+            }
+          } else {
+            curPartitionNum = partition->currentValue();
+            partition->next();
+            if(lastPartitionNum == initialLength) {
+              for(int i=0; i<lastPartitionNum - curPartitionNum - 1; i++) {
+                this->next();
+              }
+            } else {
+              for(int i=0; i<lastPartitionNum - curPartitionNum; i++) {
+                this->next();
+              }
+            }
+            lastPartitionNum = curPartitionNum;
+            k++;
+          }
+          
+          if(curPartitionNum == initialLength) {
+            this->insertNodeBeforeCurrent(curNodeToMerge);
+          } else {
+            this->insertNodeAfterCurrent(curNodeToMerge);
+            this->next();
+          }
+          
+          if(nextNodeToMerge == listToMerge->sentinal) {
+            break;
+          }
+          curNodeToMerge = nextNodeToMerge;
+        }
+        /*
         if(curPartitionNum == initialLength) {
           this->insertNodeBeforeCurrent(curNodeToMerge);
         } else {
@@ -153,10 +197,12 @@ namespace RIM {
           
           lastPartitionNum = curPartitionNum;
         }
+        */
         listToMerge->sentinal->next = listToMerge->sentinal;
         listToMerge->sentinal->prev = listToMerge->sentinal;
         listToMerge->listLength = 0;
       }
+    
   };
 }
 

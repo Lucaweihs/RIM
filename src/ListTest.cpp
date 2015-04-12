@@ -3,6 +3,15 @@
 #include<ctype.h>
 #include<assert.h>
 
+void printList(RIM::List<int>* l) {
+    l->restart();
+    printf("%d,", l->currentValue());
+    while(!l->atEnd()) {
+      l->next();
+      printf("%d,", l->currentValue());
+    }
+    printf("\n");
+}
 
 int main() {
   RIM::List<int> l; //= new List<int>();
@@ -64,32 +73,132 @@ int main() {
   assert(l.currentNode() == listNode);
   
   // Testing joinWithPartition
+  RIM::List<int> l1;
+  RIM::List<int> l2;
+  RIM::List<int> partition;
+
+  // joinWithPartition 1
+  l1 = RIM::List<int>();
+  l2 = RIM::List<int>();
+  l1.appendValue(1); l1.appendValue(2);
+  l1.appendValue(3); l1.appendValue(4);
+  l2.appendValue(5); l2.appendValue(6);
+  l2.appendValue(7); l2.appendValue(8);
   
-  RIM:List l1 = List<int>();
-  RIM:List l2 = List<int>();
-  RIM:List partition = List<int>();
+  partition = RIM::List<int>();
+  l1.joinWithPartition(&l2, &partition);
+  l1.restart();
+  for(int i=0; i<8; i++) {
+    assert(l1.currentValue() == i+1);
+    l1.next();
+  }
+  assert(l1.atEnd());
   
-  l1.appendValue(1);
-  l1.appendValue(2);
-  l1.appendValue(3);
-  l1.appendValue(4);
-  l1.appendValue(5);
+  // joinWithPartition 2
+  int a2[8] = {5,6,7,8,1,2,3,4};
+
+  l1 = RIM::List<int>();
+  l2 = RIM::List<int>();
+  l1.appendValue(1); l1.appendValue(2);
+  l1.appendValue(3); l1.appendValue(4);
+  l2.appendValue(5); l2.appendValue(6);
+  l2.appendValue(7); l2.appendValue(8);
   
-  l2.appendValue(6);
-  l2.appendValue(7);
-  l2.appendValue(8);
-  l2.appendValue(9);
-  
-  partition.appendValue(1);
-  
-  l1.joinWithPartition(l2, partition);
+  partition = RIM::List<int>();
+  partition.appendValue(4); partition.appendValue(4);
+  partition.appendValue(4); partition.appendValue(4);
+  l1.joinWithPartition(&l2, &partition);
   
   l1.restart();
-  printf("%d,", l1.currentValue());
-  while(!l1.atEnd()) {
-    printf("%d,", l1.currentValue());
+  for(int i=0; i<8; i++) {
+    assert(l1.currentValue() == a2[i]);
+    l1.next();
   }
-  printf("\n");
+  assert(l1.atEnd());
+
+  // joinWithPartition 3
+  int a3[8] = {5,1,6,2,7,3,8,4};
+
+  l1 = RIM::List<int>();
+  l2 = RIM::List<int>();
+  l1.appendValue(1); l1.appendValue(2);
+  l1.appendValue(3); l1.appendValue(4);
+  l2.appendValue(5); l2.appendValue(6);
+  l2.appendValue(7); l2.appendValue(8);
   
+  partition = RIM::List<int>();
+  partition.appendValue(4); partition.appendValue(3);
+  partition.appendValue(2); partition.appendValue(1);
+  l1.joinWithPartition(&l2, &partition);
+  l1.restart();
+  for(int i=0; i<8; i++) {
+    assert(l1.currentValue() == a3[i]);
+    l1.next();
+  }
+  assert(l1.atEnd());
+  
+  // joinWithPartition 4
+  int a4[8] = {1,5,2,6,3,7,4,8};
+
+  l1 = RIM::List<int>();
+  l2 = RIM::List<int>();
+  l1.appendValue(1); l1.appendValue(2);
+  l1.appendValue(3); l1.appendValue(4);
+  l2.appendValue(5); l2.appendValue(6);
+  l2.appendValue(7); l2.appendValue(8);
+  
+  partition = RIM::List<int>();
+  partition.appendValue(3); partition.appendValue(2);
+  partition.appendValue(1);
+  l1.joinWithPartition(&l2, &partition);
+  l1.restart();
+  for(int i=0; i<8; i++) {
+    assert(l1.currentValue() == a4[i]);
+    l1.next();
+  }
+  assert(l1.atEnd());
+  
+  // joinWithPartition 5
+  int a5[8] = {5,1,2,6,7,3,4,8};
+
+  l1 = RIM::List<int>();
+  l2 = RIM::List<int>();
+  l1.appendValue(1); l1.appendValue(2);
+  l1.appendValue(3); l1.appendValue(4);
+  l2.appendValue(5); l2.appendValue(6);
+  l2.appendValue(7); l2.appendValue(8);
+  
+  partition = RIM::List<int>();
+  partition.appendValue(4); partition.appendValue(2);
+  partition.appendValue(2);
+  l1.joinWithPartition(&l2, &partition);
+  l1.restart();
+  for(int i=0; i<8; i++) {
+    assert(l1.currentValue() == a5[i]);
+    l1.next();
+  }
+  assert(l1.atEnd());
+  
+  // joinWithPartition 6
+  int a6[8] = {1,5,2,6,7,3,8,4};
+
+  l1 = RIM::List<int>();
+  l2 = RIM::List<int>();
+  l1.appendValue(1); l1.appendValue(2);
+  l1.appendValue(3); l1.appendValue(4);
+  l2.appendValue(5); l2.appendValue(6);
+  l2.appendValue(7); l2.appendValue(8);
+  
+  partition = RIM::List<int>();
+  partition.appendValue(3); partition.appendValue(2);
+  partition.appendValue(2); partition.appendValue(1);
+  l1.joinWithPartition(&l2, &partition);
+  l1.restart();
+  for(int i=0; i<8; i++) {
+    assert(l1.currentValue() == a6[i]);
+    l1.next();
+  }
+  assert(l1.atEnd());
+
   return(0);
 }
