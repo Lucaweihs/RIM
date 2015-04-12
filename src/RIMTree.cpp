@@ -31,9 +31,9 @@ namespace RIM {
         return(rightSize+leftSize+1);
       }
       
-      RIM::List<int>* randomRankingHelper(RIM::RIMNode* currentNode, RIM::List<int>* rands) {
-        RIM::List<int>* l = new List<int>();
+      RIM::List<int>* randomRankingHelper(RIM::RIMNode* currentNode, RIM::List<double>* rands) {
         if(currentNode->left == NULL && currentNode->right == NULL) {
+          RIM::List<int>* l = new List<int>();
           l->appendValue(currentNode->rank);
           return(l);
         }
@@ -41,20 +41,27 @@ namespace RIM {
         RIM::List<int>* rightRanking = randomRankingHelper(currentNode->right, rands);
         
         int maxInversions = leftRanking->length()*rightRanking->length();
-        double Z = gaussianPoly(leftRanking->length(), rightRanking->length(), currentNode->theta);
+        //double Z = gaussianPoly(leftRanking->length(), rightRanking->length(), currentNode->theta);
+        double normConst = (exp(currentNode->theta) - exp(-1.0*maxInversions*(currentNode->theta)))/(exp(currentNode->theta)-1);
         int numInversions = -1;
         double rand = rands->currentValue();
         rands->next();
         
         while(rand > 0) {
           numInversions += 1;
-          rand -= exp(-1.0*(currentNode->theta)*numInversions)/Z;
+          //printf("%f ", rand);
+          rand -= exp(-1.0*(currentNode->theta)*numInversions)/normConst;
+          //printf("%f %d\n", exp(-1.0*(currentNode->theta)*numInversions)/normConst, numInversions);
         }
-        
+        //printf("%f\n", Z);
+
         rand = rands->currentValue();
         rands->next();
+        //printf("%f %d %d %d\n", rand, numInversions, leftRanking->length(), rightRanking->length());
         RIM::List<int>* partition = pc->randomPartition(rand, numInversions, leftRanking->length(), rightRanking->length());
+        //printf("rawr\n");
         leftRanking->joinWithPartition(rightRanking, partition);
+        return(leftRanking);
       }
     
     public:
@@ -62,13 +69,18 @@ namespace RIM {
         root = newRoot;
         discMat = NULL;
         int n, limit, parts;
+        n = 0; limit = 0; parts = 0;
         getMaxNLimitParts(root, &n, &limit, &parts);
         pc = new PartitionCache(n, limit, parts);
       }
       
-      RIM::List<int>* randomRanking(RIM::List<int>* rands) {
+      RIM::List<int>* randomRanking(RIM::List<double>* rands) {
         rands->restart();
-        return(randomRankingHelper(root, rands));
+        RIM::List<int>* l = randomRankingHelper(root, rands);
+        if(2*(l->length()-1) != rands->length()) {
+          std::exit(1);
+        }
+        return(l);
       }
       
       static double gaussianPoly(int L, int R, double theta) {

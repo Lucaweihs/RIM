@@ -4,6 +4,16 @@
 #include<ctype.h>
 #include<assert.h>
 
+void printList(RIM::List<int>* l) {
+    l->restart();
+    printf("%d,", l->currentValue());
+    while(!l->atEnd()) {
+      l->next();
+      printf("%d,", l->currentValue());
+    }
+    printf("\n");
+}
+
 int main() {
   
   // Testing discrepency matrices
@@ -19,13 +29,13 @@ int main() {
   }
 
   // Testing Tree Structure
-  RIM::RIMNode* root = new RIM::RIMNode(.12372, 1237);
-  root->attachLeft(new RIM::RIMNode(12312.1, 233));
-  root->left->attachLeft(new RIM::RIMNode(.5984, 1));
-  root->left->attachRight(new RIM::RIMNode(.8283, 2));
-  root->attachRight(new RIM::RIMNode(-.1232, 5));
-  root->right->attachLeft(new RIM::RIMNode(.488, 3));
-  root->right->attachRight(new RIM::RIMNode(.82819, 4));
+  RIM::RIMNode* root = new RIM::RIMNode(-.1, -1);
+  root->attachLeft(new RIM::RIMNode(.8, -1));
+  root->left->attachLeft(new RIM::RIMNode(0, 1));
+  root->left->attachRight(new RIM::RIMNode(0, 2));
+  root->attachRight(new RIM::RIMNode(1.6, -1));
+  root->right->attachLeft(new RIM::RIMNode(0, 3));
+  root->right->attachRight(new RIM::RIMNode(0, 4));
   
   RIM::List<int> l = RIM::List<int>();
   root->refRanking(&l);
@@ -42,6 +52,16 @@ int main() {
   assert(RIM::RIMTree::gaussianPoly(1, 1, 0) == 2.0);
   assert(fabs(RIM::RIMTree::gaussianPoly(5, 3, 0) - 56.0) < .00001);
   assert(fabs(RIM::RIMTree::gaussianPoly(5, 8, -.1) - 11976.49) < .1);
-    
+  
+  // Testing random sample
+  RIM::RIMTree rim = RIM::RIMTree(root);
+  RIM::List<double>* rands = new RIM::List<double>();
+  rands->appendValue(0.7); rands->appendValue(0.8940123);
+  rands->appendValue(0.1154309); rands->appendValue(0.6486586);
+  rands->appendValue(0.9428670); rands->appendValue(0.2261249);
+  
+  printList(rim.randomRanking(rands));
+  
+  printf("Complete\n");
   return(0);
 }
