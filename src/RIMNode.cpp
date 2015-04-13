@@ -62,11 +62,18 @@ namespace RIM {
         }
       }
       
-      void flipSubTrees() {
-          RIMNode *tmp;
-          tmp = left;
-          left = right;
-          right = tmp;
+      void flipSubTreesAndNegate() {
+        theta = -1.0*theta;
+        RIMNode *tmp;
+        tmp = left;
+        left = right;
+        right = tmp;
+      }
+      
+      int numLeaves() {
+        RIM::List<int>* l = new RIM::List<int>();
+        refRanking(l);
+        return(l->length());
       }
       
       void refRanking(RIM::List<int>* l) {
@@ -80,6 +87,21 @@ namespace RIM {
           right->refRanking(l);
         }
       }
+      
+      RIM::List<int>* preOrderThetasList() {
+        RIM::List<int>* l = new RIM::List<int>();
+        preOrderThetasListHelper(l, root);
+        return(l);
+      }
+      void preOrderThetasListHelper(RIM::List<int>* l, RIM::RIMNode curNode) {
+        if(curNode->left == NULL && curNode->right=NULL) {
+          return;
+        }
+        preOrderThetasListHelper(l, curNode->left());
+        l.appendValue(curNode->theta);
+        preOrderThetasListHelper(l, curNode->right());
+      }
+      
       
       void preOrderPrint() {
         if(left == NULL && right == NULL) {
