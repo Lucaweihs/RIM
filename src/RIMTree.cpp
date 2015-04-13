@@ -1,6 +1,7 @@
 #ifndef RIM_RIMTree
 #define RIM_RIMTree
 
+#include<Rcpp.h>
 #include<stdio.h>
 #include<stdlib.h>
 #include<cmath>
@@ -126,7 +127,7 @@ namespace RIM {
         RIM::List<int>* ranking = new RIM::List<int>();
         root->refRanking(ranking);
         numLeaves = ranking->length();
-        discMat = discrepancyMatix(refRankingListToArray(ranking), numLeaves, numLeaves);
+        discMat = discrepancyMatix(refRankingListToArray(ranking), 1, numLeaves);
         int n, limit, parts;
         n = 0; limit = 0; parts = 0;
         getMaxNLimitParts(root, &n, &limit, &parts);
@@ -135,6 +136,20 @@ namespace RIM {
       
       RIMNode* getRoot() {
         return(root);
+      }
+      
+      RIM::List<int>* preOrderThetasList() {
+        RIM::List<int>* l = new RIM::List<int>();
+        preOrderThetasListHelper(l, root);
+        return(l);
+      }
+      void preOrderThetasListHelper(RIM::List<int>* l, RIM::RIMNode* curNode) {
+        if(curNode->left == NULL && curNode->right == NULL) {
+          return;
+        }
+        preOrderThetasListHelper(l, curNode->left);
+        l->appendValue(curNode->theta);
+        preOrderThetasListHelper(l, curNode->right);
       }
       
       void mlThetaTree(int* rankings, int nRow) {

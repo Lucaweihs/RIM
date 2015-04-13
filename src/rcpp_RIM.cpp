@@ -12,7 +12,7 @@ RIM::RIMTree* RIMTreeFromList(List rimNodesList) {
   int numLeafNodes = (numNodesTotal+1)/2;
   NumericVector y;
   RIM::RIMNode* newNode;
-
+  
   for(int i=numNodesTotal-1; i >= 0; i--) {
     y = rimNodesList[i];
     leftChildIndex = y[0] - 1;
@@ -20,7 +20,7 @@ RIM::RIMTree* RIMTreeFromList(List rimNodesList) {
     isLeaf = (y[2] == 1);
     theta = y[3];
     rank = y[4];
-    
+
     newNode = new RIM::RIMNode(theta, rank);
     rimNodes[i] = newNode;
     if(!isLeaf) {
@@ -33,13 +33,11 @@ RIM::RIMTree* RIMTreeFromList(List rimNodesList) {
 
 // [[Rcpp::export]]
 NumericMatrix sampleFromRIM(NumericVector numSamplesVec, List rimNodesList) {
-
-  //CharacterVector x = CharacterVector::create( "foo", "bar" )  ;
-  //NumericVector y   = NumericVector::create(0.0);
-  //List z            = List::create( x, y ) ;
-
-
-  RIM:RIMTree* tree = RIMTreeFromList(rimNodesList);
+  int numNodesTotal = rimNodesList.length();
+  int numLeafNodes = (numNodesTotal+1)/2;
+  
+  RIM::RIMTree* tree = RIMTreeFromList(rimNodesList);
+  
   int numSamples = numSamplesVec[0];
 
   NumericVector randsVector;
@@ -67,7 +65,7 @@ NumericMatrix sampleFromRIM(NumericVector numSamplesVec, List rimNodesList) {
 
 // [[Rcpp::export]]
 NumericVector RIMThetaMLEs(NumericMatrix samples, List rimNodesList) {
-  RIM:RIMTree* tree = RIMTreeFromList(rimNodesList);
+  RIM::RIMTree* tree = RIMTreeFromList(rimNodesList);
   int* samplesMat = (int*) malloc(sizeof(int)*samples.nrow()*samples.ncol());
   for(int i=0; i<samples.nrow(); i++) {
     for(int j=0; j<samples.ncol(); j++) {
@@ -75,7 +73,14 @@ NumericVector RIMThetaMLEs(NumericMatrix samples, List rimNodesList) {
     }
   }
   tree->mlThetaTree(samplesMat, samples.nrow()) ;
-  RIM::RIMList thetaList = tree->preOrderThetasList();
+  RIM::List<int>* preOrderThetasList = tree->preOrderThetasList();
+  NumericVector preOrderThetasVector(preOrderThetasList->length());
+  preOrderThetasList->restart();
+  for(int i=0; i<preOrderThetasList->length(); i++) {
+    preOrderThetasVector[i] = preOrderThetasList->currentValue();
+    preOrderThetasList->next();
+  }
+  return(preOrderThetasVector);
 }
 
 

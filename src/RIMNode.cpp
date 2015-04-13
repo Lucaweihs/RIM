@@ -88,21 +88,6 @@ namespace RIM {
         }
       }
       
-      RIM::List<int>* preOrderThetasList() {
-        RIM::List<int>* l = new RIM::List<int>();
-        preOrderThetasListHelper(l, root);
-        return(l);
-      }
-      void preOrderThetasListHelper(RIM::List<int>* l, RIM::RIMNode curNode) {
-        if(curNode->left == NULL && curNode->right=NULL) {
-          return;
-        }
-        preOrderThetasListHelper(l, curNode->left());
-        l.appendValue(curNode->theta);
-        preOrderThetasListHelper(l, curNode->right());
-      }
-      
-      
       void preOrderPrint() {
         if(left == NULL && right == NULL) {
           printf("%d", rank);
