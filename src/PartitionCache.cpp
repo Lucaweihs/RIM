@@ -27,12 +27,14 @@ namespace RIM {
       }
       void setIndex(int val, int n, int limit, int parts) {
         if(!validInput(n, limit, parts)) {
+          printf("\nERROR: indexing problem to setIndex in PartitionCache.\n");
           std::exit(1);
         }
         partMat[n*(maxLimit+1)*(maxLimit+1) + limit*(maxParts+1) + parts] = val;
       }
       void addToIndex(int toAdd, int n, int limit, int parts) {
         if(!validInput(n, limit, parts)) {
+          printf("\nERROR: indexing problem to addToIndex in PartitionCache.\n");
           std::exit(1);
         }
         partMat[n*(maxLimit+1)*(maxLimit+1) + limit*(maxParts+1) + parts] += toAdd;
@@ -51,6 +53,7 @@ namespace RIM {
       
       int atIndex(int n, int limit, int parts) {
         if(!validInput(n, limit, parts)) {
+          printf("\nERROR: indexing problem to atIndex in PartitionCache.\n");
           std::exit(1);
         }
         return(partMat[n*(maxLimit+1)*(maxLimit+1) + limit*(maxParts+1) + parts]);
@@ -58,6 +61,7 @@ namespace RIM {
       
       bool hasBeenComputed(int n, int limit, int parts) {
         if(!validInput(n, limit, parts)) {
+          printf("\nERROR: indexing problem to hasBeenComputed in PartitionCache.\n");
           std::exit(1);
         }
         return(atIndex(n, limit, parts) != -1);
@@ -65,6 +69,7 @@ namespace RIM {
       
       int countPartitions(int n, int limit, int parts) {
         if(!validInput(n, limit, parts)) {
+          printf("\nERROR: indexing problem to countPartitions in PartitionCache.\n");
           std::exit(1);
         }
         
@@ -91,6 +96,7 @@ namespace RIM {
         if(total == 0) {
           return(l);
         } else if(rand <= 0 || rand >= 1) {
+          printf("\nERROR: random number inputted to randomPartition is not uniform(0,1).\n");
           std::exit(1);
         }
         

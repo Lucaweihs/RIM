@@ -49,6 +49,7 @@ namespace RIM {
       
       T firstValue() {
         if(length() == 0) {
+          printf("\nERROR: Attempting to get first value of empty list.\n");
           std::exit(1);
         }
         return(sentinal->next->value);
@@ -63,6 +64,7 @@ namespace RIM {
       
       T lastValue() {
         if(length() == 0) {
+          printf("\nERROR: Attempting to get last value of empty list.\n");
           std::exit(1);
         }
         return(sentinal->prev->value);
@@ -70,6 +72,7 @@ namespace RIM {
       
       ListNode<T>* currentNode() {
         if(length() == 0) {
+          printf("\nERROR: Attempting to get current node of empty list.\n");
           std::exit(1);
         }
         return(current);
@@ -77,6 +80,7 @@ namespace RIM {
       
       T currentValue() {
         if(length() == 0) {
+          printf("\nERROR: Attempting to get current value of empty list.\n");
           std::exit(1);
         }
         return(current->value);
@@ -113,6 +117,7 @@ namespace RIM {
       
       void joinWithPartition(List<T>* listToMerge, List<int>* partition) {
         if(partition->length() > listToMerge->length()) {
+          printf("\nERROR: Attempting merge two lists with a partition that is too long.\n");
           std::exit(1);
         }
         partition->restart();

@@ -45,6 +45,25 @@ NumericMatrix sampleFromRIM(NumericVector numSamplesVec, List rimNodesList) {
   NumericMatrix rankings(numSamples, numLeafNodes);
   RIM::List<int>* ranking;
   
+  // New way of doing it
+  for(int i=0; i < numSamples; i++) {
+    randsVector = runif(numLeafNodes*(numLeafNodes - 1));
+    rands = new RIM::List<double>();
+    for(int j=0; j < numLeafNodes*(numLeafNodes - 1); j++) {
+      rands->appendValue(randsVector[j]);
+    }
+    //printf("bar?\n");
+    ranking = tree->randomRanking(rands);
+    //printf("huh?\n");
+    
+    ranking->restart();
+    for(int j=0; j<numLeafNodes; j++) {
+      rankings(i,j) = ranking->currentValue();
+      ranking->next();
+    }
+  }
+  
+  /* // Old way of doing it
   for(int i=0; i < numSamples; i++) {
     randsVector = runif(2*(numLeafNodes - 1));
     rands = new RIM::List<double>();
@@ -58,7 +77,7 @@ NumericMatrix sampleFromRIM(NumericVector numSamplesVec, List rimNodesList) {
       rankings(i,j) = ranking->currentValue();
       ranking->next();
     }
-  }
+  }*/
   
   return rankings;
 }

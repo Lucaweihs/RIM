@@ -1,7 +1,7 @@
 #ifndef RIM_RIMTree
 #define RIM_RIMTree
 
-#include<Rcpp.h>
+//#include<Rcpp.h>
 #include<stdio.h>
 #include<stdlib.h>
 #include<cmath>
@@ -44,27 +44,51 @@ namespace RIM {
         RIM::List<int>* leftRanking = randomRankingHelper(currentNode->left, rands);
         RIM::List<int>* rightRanking = randomRankingHelper(currentNode->right, rands);
         
+        int L = leftRanking->length();
+        int R = rightRanking->length();
+        
+        // New way of doing it
+        double* zMatrix = getZMatrix(L, R, currentNode->theta);
+        double rand;
+        int last = L;
+        RIM::List<int>* partition = new RIM::List<int>();
+        
+        for(int i = R; i >= 1; i--) {
+          rand = rands->currentValue();
+          rands->next();
+          for(int j = 0; j <= std::min(L,last); j++) {
+            rand -= exp(-1.0*currentNode->theta*j)*zMatrix[j*(R+1) + (i-1)]/zMatrix[last*(R+1) + i];
+            if(rand <= 0) {
+              last = j;
+              if(last != 0) {
+                partition->appendValue(j);
+              }
+              break;
+            }
+          }
+          if(last == 0) {
+            break;
+          }
+        }
+        
+        /*
+        // Old way of doing it
         int maxInversions = leftRanking->length()*rightRanking->length();
         double Z = gaussianPoly(leftRanking->length(), rightRanking->length(), currentNode->theta);
-        //double normConst = (exp(currentNode->theta) - exp(-1.0*maxInversions*(currentNode->theta)))/(exp(currentNode->theta)-1);
         int numInversions = -1;
         double rand = rands->currentValue();
         rands->next();
         
         while(rand > 0) {
           numInversions += 1;
-          //printf("%f ", rand);
           rand -= exp(-1.0*(currentNode->theta)*numInversions)*pc->countPartitions(numInversions, leftRanking->length(), rightRanking->length())/Z;
-          //printf("%f %d\n", exp(-1.0*(currentNode->theta)*numInversions)*pc->countPartitions(numInversions, leftRanking->length(), rightRanking->length())/Z, numInversions);
         }
-        //printf("\n");
-        //printf("%f\n", Z);
 
         rand = rands->currentValue();
         rands->next();
-        //printf("%f %d %d %d\n", rand, numInversions, leftRanking->length(), rightRanking->length());
         RIM::List<int>* partition = pc->randomPartition(rand, numInversions, leftRanking->length(), rightRanking->length());
-        //printf("rawr\n");
+        */
+                
         leftRanking->joinWithPartition(rightRanking, partition);
         return(leftRanking);
       }
@@ -168,9 +192,14 @@ namespace RIM {
       RIM::List<int>* randomRanking(RIM::List<double>* rands) {
         rands->restart();
         RIM::List<int>* l = randomRankingHelper(root, rands);
-        if(2*(l->length()-1) != rands->length()) {
+        if(l->length()*(l->length()-1) != rands->length()) {
+          printf("\nERROR: Not enough random numbers inputted to randomRanking.");
           std::exit(1);
         }
+        // Old Way
+        //if(2*(l->length()-1) != rands->length()) {
+        //  std::exit(1);
+        //}
         return(l);
       }
       
@@ -246,9 +275,43 @@ namespace RIM {
         return(theta*aveDisc + log(gaussianPoly(L, R, theta)));
       }
       
+      static double* getZMatrix(int L, int R, double theta) {
+        double* zMatrix = (double*) malloc(sizeof(double)*(L+1)*(R+1));
+        double q = exp(-theta);
+        if(theta != 0) {
+          for(int i=0; i <= L; i++) {
+            for(int j=0; j <= R; j++) {
+              if(i == 0 && j == 0) {
+                zMatrix[i*(R+1) + j] = 1;
+              } else if(j == 0) {
+                zMatrix[i*(R+1) + j] = zMatrix[(i-1)*(R+1) + j]*(1-pow(q, i+j))/(1-pow(q, i));
+              } else {
+                zMatrix[i*(R+1) + j] = zMatrix[i*(R+1) + (j-1)]*(1-pow(q, i+j))/(1-pow(q, j));
+              }
+            }
+          }
+        } else {
+          for(int i=0; i <= L; i++) {
+            for(int j=0; j <= R; j++) {
+              if(i == 0 && j == 0) {
+                zMatrix[i*(R+1) + j] = 1;
+              } else if(j == 0) {
+                zMatrix[i*(R+1) + j] = zMatrix[(i-1)*(R+1) + j]*(i+j)/(1.0*i);
+              } else {
+                zMatrix[i*(R+1) + j] = zMatrix[i*(R+1) + (j-1)]*(i+j)/(1.0*j);
+              }
+            }
+          }
+        }
+        return(zMatrix);
+      }
+      
       static double gaussianPoly(int L, int R, double theta) {
-        if(L <= 0 || R <= 0) {
+        if(L < 0 || R < 0) {
+          printf("\nERROR: One of L,R<0 in gaussianPoly.");
           std::exit(1);
+        } else if(L == 0 || R == 0) {
+          return(1.0);
         }
         double q, logG;
         int n = std::max(L,R);

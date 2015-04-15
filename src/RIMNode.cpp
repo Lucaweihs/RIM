@@ -58,6 +58,7 @@ namespace RIM {
         ranking->restart();
         int treeSize = attachRankingToLeavesHelper(ranking);
         if(treeSize != 2*ranking->length() - 1) {
+          printf("\nERROR: Ranking too attach was too short or too long for RIM tree.\n");
           std::exit(1);
         }
       }
