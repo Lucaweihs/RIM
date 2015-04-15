@@ -80,15 +80,15 @@ namespace RIM {
         transformToCanonicalHelper(node->right);
       }
       
-      List<int>* mlThetaTreeHelper(RIMNode* curNode, int* dataDiscMat) {
+      List<int>* mlThetaTreeHelper(RIMNode* curNode, double* aveDataDiscMat) {
         if(curNode->left == NULL && curNode->right == NULL) {
           RIM::List<int>* l = new List<int>();
           l->appendValue(curNode->rank);
           return(l);
         }
         
-        RIM::List<int>* leftRanking = mlThetaTreeHelper(curNode->left, dataDiscMat);
-        RIM::List<int>* rightRanking = mlThetaTreeHelper(curNode->right, dataDiscMat);
+        RIM::List<int>* leftRanking = mlThetaTreeHelper(curNode->left, aveDataDiscMat);
+        RIM::List<int>* rightRanking = mlThetaTreeHelper(curNode->right, aveDataDiscMat);
         
         double aveDisc = 0;
         int rankLeft, rankRight;
@@ -108,9 +108,9 @@ namespace RIM {
             index = maxRankIndex*this->numLeaves + minRankIndex;
             
             if(this->discMat[index] != 0) {
-              aveDisc += 1 - dataDiscMat[index];
+              aveDisc += 1 - aveDataDiscMat[index];
             } else {
-              aveDisc += dataDiscMat[index];
+              aveDisc += aveDataDiscMat[index];
             }
           }
         }
@@ -138,12 +138,12 @@ namespace RIM {
         return(root);
       }
       
-      RIM::List<int>* preOrderThetasList() {
-        RIM::List<int>* l = new RIM::List<int>();
+      RIM::List<double>* preOrderThetasList() {
+        RIM::List<double>* l = new RIM::List<double>();
         preOrderThetasListHelper(l, root);
         return(l);
       }
-      void preOrderThetasListHelper(RIM::List<int>* l, RIM::RIMNode* curNode) {
+      void preOrderThetasListHelper(RIM::List<double>* l, RIM::RIMNode* curNode) {
         if(curNode->left == NULL && curNode->right == NULL) {
           return;
         }
@@ -154,12 +154,15 @@ namespace RIM {
       
       void mlThetaTree(int* rankings, int nRow) {
         int* dataDiscMat = discrepancyMatix(rankings, nRow, this->numLeaves);
+        double* aveDataDiscMat = (double*) malloc(sizeof(double)*this->numLeaves*this->numLeaves);
         for(int i=0; i<this->numLeaves; i++) {
           for(int j=0; j<this->numLeaves; j++) {
-            dataDiscMat[i*this->numLeaves + j] /= 1.0*nRow; 
+            aveDataDiscMat[i*this->numLeaves + j] = dataDiscMat[i*this->numLeaves + j] / (1.0*nRow); 
+            printf("%d ", dataDiscMat[i*this->numLeaves + j]);
           }
+          printf("\n");
         }
-        mlThetaTreeHelper(root, dataDiscMat);
+        mlThetaTreeHelper(root, aveDataDiscMat);
       }
       
       RIM::List<int>* randomRanking(RIM::List<double>* rands) {

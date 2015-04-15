@@ -73,7 +73,7 @@ NumericVector RIMThetaMLEs(NumericMatrix samples, List rimNodesList) {
     }
   }
   tree->mlThetaTree(samplesMat, samples.nrow()) ;
-  RIM::List<int>* preOrderThetasList = tree->preOrderThetasList();
+  RIM::List<double>* preOrderThetasList = tree->preOrderThetasList();
   NumericVector preOrderThetasVector(preOrderThetasList->length());
   preOrderThetasList->restart();
   for(int i=0; i<preOrderThetasList->length(); i++) {
