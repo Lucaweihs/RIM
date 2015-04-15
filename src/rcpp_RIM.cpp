@@ -28,6 +28,7 @@ RIM::RIMTree* RIMTreeFromList(List rimNodesList) {
       newNode->attachRight(rimNodes[rightChildIndex]);
     }
   }
+  
   return(new RIM::RIMTree(rimNodes[0]));
 }
 
@@ -52,15 +53,15 @@ NumericMatrix sampleFromRIM(NumericVector numSamplesVec, List rimNodesList) {
     for(int j=0; j < numLeafNodes*(numLeafNodes - 1); j++) {
       rands->appendValue(randsVector[j]);
     }
-    //printf("bar?\n");
     ranking = tree->randomRanking(rands);
-    //printf("huh?\n");
     
     ranking->restart();
     for(int j=0; j<numLeafNodes; j++) {
       rankings(i,j) = ranking->currentValue();
       ranking->next();
     }
+    delete ranking;
+    delete rands;
   }
   
   /* // Old way of doing it
@@ -78,7 +79,7 @@ NumericMatrix sampleFromRIM(NumericVector numSamplesVec, List rimNodesList) {
       ranking->next();
     }
   }*/
-  
+  delete tree;
   return rankings;
 }
 
@@ -99,6 +100,10 @@ NumericVector RIMThetaMLEs(NumericMatrix samples, List rimNodesList) {
     preOrderThetasVector[i] = preOrderThetasList->currentValue();
     preOrderThetasList->next();
   }
+  
+  free(samplesMat);
+  delete preOrderThetasList;
+  delete tree;
   return(preOrderThetasVector);
 }
 
