@@ -41,6 +41,16 @@ namespace RIM {
         rank = initRank;
       }
       
+      void deleteAncestors() {
+        if(left == NULL && right == NULL) {
+          return;
+        }
+        left->deleteAncestors();
+        right->deleteAncestors();
+        delete left;
+        delete right;
+      }
+      
       void attachLeft(RIMNode* nodeForLeft) {
         left = nodeForLeft;
         nodeForLeft->parent = this;
@@ -72,9 +82,9 @@ namespace RIM {
       }
       
       int numLeaves() {
-        RIM::List<int>* l = new RIM::List<int>();
-        refRanking(l);
-        return(l->length());
+        RIM::List<int> l = RIM::List<int>();
+        refRanking(&l);
+        return(l.length());
       }
       
       void refRanking(RIM::List<int>* l) {

@@ -70,6 +70,7 @@ namespace RIM {
             break;
           }
         }
+        free(zMatrix);
         
         /*
         // Old way of doing it
@@ -90,6 +91,8 @@ namespace RIM {
         */
                 
         leftRanking->joinWithPartition(rightRanking, partition);
+        delete rightRanking;
+        delete partition;
         return(leftRanking);
       }
       
@@ -141,21 +144,34 @@ namespace RIM {
         
         curNode->theta = mlTheta(leftRanking->length(), rightRanking->length(), aveDisc, curNode->theta, MAX_ITER_DEFAULT, TOL_DEFAULT);
         
-        leftRanking->joinWithPartition(rightRanking, new List<int>());
+        RIM::List<int> tmp = RIM::List<int>();
+        leftRanking->joinWithPartition(rightRanking, &tmp);
+        delete rightRanking;
         return(leftRanking);
       }
     
     public:
       RIMTree(RIMNode* newRoot) {
         root = newRoot;
-        RIM::List<int>* ranking = new RIM::List<int>();
-        root->refRanking(ranking);
-        numLeaves = ranking->length();
-        discMat = discrepancyMatix(refRankingListToArray(ranking), 1, numLeaves);
+        RIM::List<int> rankingList = RIM::List<int>();
+        root->refRanking(&rankingList);
+        int* rankingArray = refRankingListToArray(&rankingList);
+        
+        numLeaves = rankingList.length();
+        discMat = discrepancyMatix(rankingArray, 1, numLeaves);
+        free(rankingArray);
+        
         int n, limit, parts;
         n = 0; limit = 0; parts = 0;
         getMaxNLimitParts(root, &n, &limit, &parts);
         pc = new PartitionCache(n, limit, parts);
+      }
+      
+      ~RIMTree() {
+        root->deleteAncestors();
+        delete root;
+        free(discMat);
+        delete pc;
       }
       
       RIMNode* getRoot() {
@@ -167,6 +183,7 @@ namespace RIM {
         preOrderThetasListHelper(l, root);
         return(l);
       }
+      
       void preOrderThetasListHelper(RIM::List<double>* l, RIM::RIMNode* curNode) {
         if(curNode->left == NULL && curNode->right == NULL) {
           return;
@@ -182,11 +199,11 @@ namespace RIM {
         for(int i=0; i<this->numLeaves; i++) {
           for(int j=0; j<this->numLeaves; j++) {
             aveDataDiscMat[i*this->numLeaves + j] = dataDiscMat[i*this->numLeaves + j] / (1.0*nRow); 
-            printf("%d ", dataDiscMat[i*this->numLeaves + j]);
           }
-          printf("\n");
         }
         mlThetaTreeHelper(root, aveDataDiscMat);
+        free(dataDiscMat);
+        free(aveDataDiscMat);
       }
       
       RIM::List<int>* randomRanking(RIM::List<double>* rands) {
@@ -204,9 +221,9 @@ namespace RIM {
       }
       
       int* refRankingArray() {
-        RIM::List<int>* l = new RIM::List<int>();
-        root->refRanking(l);
-        return(refRankingListToArray(l));
+        RIM::List<int> l = RIM::List<int>();
+        root->refRanking(&l);
+        return(refRankingListToArray(&l));
       }
       
       static int* refRankingListToArray(RIM::List<int>* l) {
@@ -235,23 +252,19 @@ namespace RIM {
         double curScore, grad;
         while(true) {
           grad = gradScore(L, R, aveDisc, theta);
-          //printf("%f\n", grad);
           curScore = score(L, R, aveDisc, theta - grad);
           while(curScore > lastScore) {
-            //printf("%f %f\n", curScore, lastScore);
             grad = grad/2;
             curScore = score(L, R, aveDisc, theta - grad);
           }
           theta = theta - grad;
-          //printf("%f %f\n", theta, grad);
           i++;
-          //printf("%f\n", curScore);
           if(i != 1 && 1 - curScore/lastScore < tol) {
             return(theta);
           } else {
             lastScore = curScore;
           }
-          if(i > maxIter) {
+          if(i >= maxIter) {
             printf("WARNING: Maximum Iterations reached!\n");
             return(theta);
           }

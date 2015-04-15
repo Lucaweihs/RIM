@@ -7,8 +7,6 @@
 #include<algorithm>
 #include<math.h>
 #include"List.cpp"
-//#include<boost/unordered_map.hpp>
-//#typedef boost::unordered_map<>
 
 namespace RIM {
   class PartitionCache {
@@ -25,6 +23,7 @@ namespace RIM {
         }
         return(true);
       }
+      
       void setIndex(int val, int n, int limit, int parts) {
         if(!validInput(n, limit, parts)) {
           printf("\nERROR: indexing problem to setIndex in PartitionCache.\n");
@@ -32,6 +31,7 @@ namespace RIM {
         }
         partMat[n*(maxLimit+1)*(maxLimit+1) + limit*(maxParts+1) + parts] = val;
       }
+      
       void addToIndex(int toAdd, int n, int limit, int parts) {
         if(!validInput(n, limit, parts)) {
           printf("\nERROR: indexing problem to addToIndex in PartitionCache.\n");
@@ -49,6 +49,10 @@ namespace RIM {
         for(int i=0; i<(n+1)*(parts+1)*(limit+1)+1; i++) {
             partMat[i] = -1;
         }
+      }
+      
+      ~PartitionCache() {
+        free(partMat);
       }
       
       int atIndex(int n, int limit, int parts) {
@@ -122,30 +126,3 @@ namespace RIM {
 }
 
 #endif
-
-/*
-List* randomPartition(int n, int limit, int maxParts) {
-  
-}
-
-int countPartitions(int* countMat, int n, int limit, int maxParts, int currentN, int currentLimit, int currentMaxParts) {
-  int ind = currentN*(limit*maxParts) + currentLimit*maxParts + currentMaxParts;
-  if(countMat[ind] != 0) {
-    return(countMat[ind]);
-  }
-  else if(currentN == 0) {
-    countMat[ind] = 1;
-    return(1);
-  }
-  else if(currentN > currentLimit*currentMaxParts) {
-    return(0);
-  } 
-  else {
-    for(int newLimit=1; newLimit <= min(currentLimit, currentN); newLimit++) {
-      countMat[ind] += countPartitions(countMat, n, limit, maxParts, currentN-newLimit, newLimit, currentMaxParts-1);
-    }
-    return(countMat[ind]);
-  }
-}
-
-*/

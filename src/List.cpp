@@ -19,6 +19,17 @@ namespace RIM {
         listLength = 0;
       }
       
+      ~List() {
+        RIM::ListNode<T>* nextNode = sentinal->next->next;
+        RIM::ListNode<T>* curNode = sentinal->next;
+        while(curNode != sentinal) {
+          delete curNode;
+          curNode = nextNode;
+          nextNode = nextNode->next;
+        }
+        delete sentinal;
+      }
+      
       int length() {
         return(listLength);
       }
@@ -127,12 +138,6 @@ namespace RIM {
         int initialLength = this->length();
         int lastPartitionNum = initialLength;
         int curPartitionNum = initialLength;
-        //int lastPartitionNum = partition->currentValue();
-        //int curPartitionNum = lastPartitionNum;
-        /*partition->next();
-        for(int i=0; i<initialLength-lastPartitionNum-1; i++) {
-          this->next();
-        }*/
         
         ListNode<int>* curNodeToMerge = listToMerge->sentinal->next;
         ListNode<int>* nextNodeToMerge;
@@ -174,35 +179,7 @@ namespace RIM {
           }
           curNodeToMerge = nextNodeToMerge;
         }
-        /*
-        if(curPartitionNum == initialLength) {
-          this->insertNodeBeforeCurrent(curNodeToMerge);
-        } else {
-          this->insertNodeAfterCurrent(curNodeToMerge);
-          this->next();
-        }
-        curNodeToMerge = nextNodeToMerge;
-        nextNodeToMerge = curNodeToMerge->next;
-        
-        while(curNodeToMerge != listToMerge->sentinal) {
-          curPartitionNum = partition->currentValue();
-          partition->next();
-          for(int i=0; i<lastPartitionNum - curPartitionNum; i++) {
-            this->next();
-          }
-          
-          if(curPartitionNum == initialLength) {
-            this->insertNodeBeforeCurrent(curNodeToMerge);
-          } else {
-            this->insertNodeAfterCurrent(curNodeToMerge);
-            this->next();
-          }
-          curNodeToMerge = nextNodeToMerge;
-          nextNodeToMerge = curNodeToMerge->next;
-          
-          lastPartitionNum = curPartitionNum;
-        }
-        */
+
         listToMerge->sentinal->next = listToMerge->sentinal;
         listToMerge->sentinal->prev = listToMerge->sentinal;
         listToMerge->listLength = 0;
