@@ -178,6 +178,10 @@ namespace RIM {
         return(root);
       }
       
+      int getNumLeaves() {
+        return(numLeaves);
+      }
+      
       RIM::List<double>* preOrderThetasList() {
         RIM::List<double>* l = new RIM::List<double>();
         preOrderThetasListHelper(l, root);
@@ -224,6 +228,43 @@ namespace RIM {
         RIM::List<int> l = RIM::List<int>();
         root->refRanking(&l);
         return(refRankingListToArray(&l));
+      }
+      
+      double* treeToMatrix() {
+        RIM::List<RIM::RIMNode*> nodeList = List<RIM::RIMNode*>();
+        
+        double* treeMat = (double*) malloc(sizeof(double)*(2*numLeaves-1)*5);
+        for(int i=0; i<(2*numLeaves-1)*5; i++) {
+          treeMat[i] = 0;
+        }
+        
+        int k = 0;
+        int length = 1;
+        RIM::RIMNode* curNode;
+        
+        nodeList.appendValue(root);
+        nodeList.restart();
+        for(int k = 0; k < 2*numLeaves-1; k++) {
+          curNode = nodeList.currentValue();
+          if(curNode->left == NULL && curNode->right == NULL) {
+            treeMat[k*5 + 0] = 0;
+            treeMat[k*5 + 1] = 0;
+            treeMat[k*5 + 2] = 1;
+            treeMat[k*5 + 3] = 0;
+            treeMat[k*5 + 4] = curNode->rank;
+          } else {
+            treeMat[k*5 + 0] = length + 1;
+            treeMat[k*5 + 1] = length + 2;
+            treeMat[k*5 + 2] = 0;
+            treeMat[k*5 + 3] = curNode->theta;
+            treeMat[k*5 + 4] = 0;
+            nodeList.appendValue(curNode->left);
+            nodeList.appendValue(curNode->right);
+            length += 2;
+          }
+          nodeList.next();
+        }
+        return(treeMat);
       }
       
       static int* refRankingListToArray(RIM::List<int>* l) {
@@ -275,7 +316,7 @@ namespace RIM {
         double gScore = aveDisc;
         int n = std::max(L, R);
         if(theta != 0) {
-          for(int i=n+1; i<L+R; i++) {
+          for(int i=n+1; i <= L+R; i++) {
             gScore += i*exp(-theta*i)/(1-exp(-theta*i)) - (i-n)*exp(-theta*(i-n))/(1-exp(-theta*(i-n)));
           }
           return(gScore);
