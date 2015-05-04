@@ -36,14 +36,25 @@ namespace RIM {
       }
       
       RIM::List<int>* randomRankingHelper(RIM::RIMNode* currentNode, RIM::List<double>* rands) {
+        //printf("Confused2\n");
+        //if(currentNode == NULL) {
+        //  printf("What!!!!?\n");
+        //}
+        //printf("What?\n");
         if(currentNode->left == NULL && currentNode->right == NULL) {
+          //printf("Confused1\n");
           RIM::List<int>* l = new List<int>();
           l->appendValue(currentNode->rank);
           return(l);
         }
+        //printf("Confused0\n");
+        //if((currentNode->left == NULL) || (currentNode->right == NULL)) {
+        //  printf("FUUUUUUCK\n");
+        //}
+        //printf("rawr\n");
         RIM::List<int>* leftRanking = randomRankingHelper(currentNode->left, rands);
         RIM::List<int>* rightRanking = randomRankingHelper(currentNode->right, rands);
-        
+        //printf("rawr2\n");
         int L = leftRanking->length();
         int R = rightRanking->length();
         
@@ -285,6 +296,55 @@ namespace RIM {
       
       void transformToCanonical() {
         transformToCanonicalHelper(root);
+      }
+      
+      RIM::List<int>* logProbHelper(RIM::RIMNode* curNode, double* logProb, double* aveDiscMatrix) {
+        if(curNode->left == NULL && curNode->right == NULL) {
+          RIM::List<int>* l = new RIM::List<int>();
+          l->appendValue(curNode->rank);
+          return(l);
+        }
+        //printf("yar\n");
+        RIM::List<int>* leftRanking = logProbHelper(curNode->left, logProb, aveDiscMatrix);
+        RIM::List<int>* rightRanking = logProbHelper(curNode->right, logProb, aveDiscMatrix);
+        
+        double aveDisc = 0;
+        int L = leftRanking->length();
+        int R = rightRanking->length();
+        
+        //printf("L=%d, R=%d, numLeaves=%d\n", L, R, this->numLeaves);
+        
+        leftRanking->restart();
+        rightRanking->restart();
+        int ind1, ind2;
+        for(int i=0; i < L; i++) {
+          ind1 = leftRanking->currentValue();
+          leftRanking->next();
+          for(int j=0; j<R; j++) {
+            ind2 = rightRanking->currentValue();
+            rightRanking->next();
+            //printf("%d %d \n", ind1, ind2);
+            if(ind1 < ind2) {
+              aveDisc += aveDiscMatrix[ind2*this->numLeaves + ind1];
+            } else {
+              aveDisc += 1 - aveDiscMatrix[ind1*this->numLeaves + ind2];
+            }
+          }
+        }
+        //printf("bar\n");
+        (*logProb) -= score(L, R, aveDisc, curNode->theta);
+        //printf("tar");
+        RIM::List<int> l = RIM::List<int>();
+        leftRanking->joinWithPartition(rightRanking, &l);
+        delete rightRanking;
+        return(leftRanking);
+      }
+      
+      double logProbability(double* aveDiscMatrix) {
+        double logProb = 0;
+        RIM::List<int>* l = logProbHelper(root, &logProb, aveDiscMatrix);
+        delete l;
+        return(logProb);
       }
       
       static double mlTheta(int L, int R, double aveDisc, double theta, int maxIter, double tol) {

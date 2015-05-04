@@ -173,24 +173,24 @@ NumericMatrix averageDiscMatrix(NumericMatrix samples) {
   return(aveDiscMat);
 }
 
-void costAndBackPointersToRIMTreeHelper(int n, RIM::RIMNode* curNode, int i, int j, int* backPointers, double* thetas) {
+void refRankingBackPointersAndThetasToRIMTreeHelper(int n, int* refRanking, RIM::RIMNode* curNode, int i, int j, int* backPointers, double* thetas) {
   if(i == j) {
-    curNode->rank = i;
+    curNode->rank = refRanking[i];
     return;
   }
   curNode->theta = thetas[i*n + j];
   int k = backPointers[i*n + j];
   RIM::RIMNode* leftNode = new RIM::RIMNode(0,0);
   RIM::RIMNode* rightNode = new RIM::RIMNode(0,0);
-  costAndBackPointersToRIMTreeHelper(n, leftNode, i, k, backPointers, thetas);
-  costAndBackPointersToRIMTreeHelper(n, rightNode, k + 1, j, backPointers, thetas);
+  refRankingBackPointersAndThetasToRIMTreeHelper(n, refRanking, leftNode, i, k, backPointers, thetas);
+  refRankingBackPointersAndThetasToRIMTreeHelper(n, refRanking, rightNode, k + 1, j, backPointers, thetas);
   curNode->attachLeft(leftNode);
   curNode->attachRight(rightNode);
 }
 
-RIM::RIMTree* backPointersAndThetasToRIMTree(int n, int* backPointers, double* thetas) {
+RIM::RIMTree* refRankingBackPointersAndThetasToRIMTree(int n, int* refRanking, int* backPointers, double* thetas) {
   RIM::RIMNode* root = new RIM::RIMNode(0,0);
-  costAndBackPointersToRIMTreeHelper(n, root, 0, n - 1, backPointers, thetas);
+  refRankingBackPointersAndThetasToRIMTreeHelper(n, refRanking, root, 0, n - 1, backPointers, thetas);
   return(new RIM::RIMTree(root));
 }
 
@@ -206,8 +206,7 @@ NumericMatrix RIMTreeToMatrix(RIM::RIMTree* tree) {
   return(treeMatrixNumeric);
 }
 
-// [[Rcpp::export]]
-NumericMatrix StructByDP(NumericMatrix aveDiscMatrix, bool makeCanonical) {
+RIM::RIMTree* StructByDPRIMTree(NumericMatrix aveDiscMatrix, int* refRanking, bool makeCanonical) {
   int n = aveDiscMatrix.ncol();
   double* costMatrix = (double*) calloc(n*n, sizeof(double));
   int* backPointers = (int*) calloc(n*n, sizeof(int));
@@ -217,6 +216,7 @@ NumericMatrix StructByDP(NumericMatrix aveDiscMatrix, bool makeCanonical) {
   double aveV = 0;
   double s;
   double theta;
+  int indMin, indMax;
   for(int l=2; l <= n; l++) {
     for(int j=1; j <= n - l + 1; j++) {
       m = j + l - 1;
@@ -226,12 +226,25 @@ NumericMatrix StructByDP(NumericMatrix aveDiscMatrix, bool makeCanonical) {
         aveV = 0;
         for(int j1=j; j1 <= k; j1++) {
           for(int m1=k+1; m1 <= m; m1++) {
-            aveV += aveDiscMatrix(m1-1, j1-1);
+            if(refRanking[j1-1] < refRanking[m1-1]) {
+              aveV += aveDiscMatrix(refRanking[m1-1], refRanking[j1-1]);
+            } else {
+              aveV += 1 - aveDiscMatrix(refRanking[j1-1], refRanking[m1-1]);
+            }
+            /*
+            indMin = std::min(refRanking[j1-1], refRanking[m1-1]);
+            indMax = std::max(refRanking[j1-1], refRanking[m1-1]);
+            if(refDiscMatrix[indMax, indMin] == 0) {
+              aveV += aveDiscMatrix(indMax, indMin);
+            } else {
+              aveV += 1 - aveDiscMatrix(indMax, indMin);
+            }
+            */
           }
         }
         L = k - j + 1;
         R = m - k;
-        theta = RIM::RIMTree::mlTheta(L, R, aveV, 0.1, 1000, .0000001);
+        theta = RIM::RIMTree::mlTheta(L, R, aveV, 0.1, 1000, .00001);
         s = costMatrix[(j-1)*n + (k-1)] + costMatrix[k*n + (m-1)] + RIM::RIMTree::score(L, R, aveV, theta);
         //printf("k=%d, L=%d, R=%d, aveV=%f, theta=%f, score=%f, gaussianPoly=%f, s=%f \n", k, L, R, aveV, theta, RIM::RIMTree::score(L, R, aveV, theta), RIM::RIMTree::gaussianPoly(L, R, theta), s);
         if(s < costMatrix[(j-1)*n+(m-1)]) {
@@ -243,19 +256,102 @@ NumericMatrix StructByDP(NumericMatrix aveDiscMatrix, bool makeCanonical) {
     }
   }
     
-  RIM::RIMTree* tree = backPointersAndThetasToRIMTree(n, backPointers, thetas);
-  
+  //free(refDiscMatrix);
+  RIM::RIMTree* tree = refRankingBackPointersAndThetasToRIMTree(n, refRanking, backPointers, thetas);
   if(makeCanonical) {
     tree->transformToCanonical();
   }
+  return(tree);
+}
+
+// [[Rcpp::export]]
+NumericMatrix StructByDP(NumericMatrix aveDiscMatrix, NumericVector refRanking, bool makeCanonical) {
+  int* refRankingArray = (int*) malloc(sizeof(int)*aveDiscMatrix.ncol());
+  for(int i=0; i < aveDiscMatrix.ncol(); i++) {
+    refRankingArray[i] = refRanking[i];
+  }
+  RIM::RIMTree* tree = StructByDPRIMTree(aveDiscMatrix, refRankingArray, makeCanonical);
   NumericMatrix treeMatrix = RIMTreeToMatrix(tree);
   delete tree;
   return(treeMatrix);
 }
 
-//NumericMatrix SASearch(NumericMatrix aveDiscMatrix, double inverseTemp, bool makeCanonical) {
+void sampleOneFromRIMTree(RIM::RIMTree* tree, int* rankingArray) {
+  int numLeafNodes = tree->getNumLeaves();
+  RIM::List<int>* ranking;
+  RIM::List<double>* rands = new RIM::List<double>();
+  NumericVector randsVector = runif(numLeafNodes*(numLeafNodes - 1));
+  for(int j=0; j < numLeafNodes*(numLeafNodes - 1); j++) {
+    rands->appendValue(randsVector[j]);
+  }
+  //printf("Mid Sampling\n"); 
+  ranking = tree->randomRanking(rands);
+  //printf("Mid Sampling\n");
+  ranking->restart();
   
-//}
+  for(int i=0; i < ranking->length(); i++) {
+    rankingArray[i] = ranking->currentValue();
+    ranking->next();
+  }
+  delete rands;
+  delete ranking;
+}
+
+// [[Rcpp::export]]
+NumericMatrix SASearch(NumericMatrix aveDiscMatrix, NumericVector refRanking, double inverseTemp, int maxIter, bool makeCanonical) {
+  int numLeafNodes = aveDiscMatrix.nrow();
+  int* ranking = (int*) malloc(sizeof(int)*numLeafNodes);
+  for(int i=0; i < numLeafNodes; i++) {
+     ranking[i] = refRanking[i];
+  }
+  
+  double* aveDiscMatrixAsDouble = (double*) malloc(sizeof(double)*numLeafNodes*numLeafNodes);
+  for(int i=0; i < numLeafNodes; i++) {
+    for(int j=0; j < numLeafNodes; j++) {
+      aveDiscMatrixAsDouble[i*numLeafNodes + j] = aveDiscMatrix(i,j);
+    }
+  }
+  
+  RIM::RIMTree* savedTrees[maxIter+1];
+  savedTrees[0] = StructByDPRIMTree(aveDiscMatrix, ranking, makeCanonical);
+  RIM::RIMTree* tmpTree;
+  RIM::RIMTree* bestTree = savedTrees[0];
+  
+  double lastLogProb = savedTrees[0]->logProbability(aveDiscMatrixAsDouble);
+  double bestLogProb = lastLogProb;
+  double curLogProb;
+  double rand;
+  for(int t=1; t <= maxIter; t++) {
+    //printf("%f\n", bestLogProb);
+    while(true) {
+      sampleOneFromRIMTree(savedTrees[t-1], ranking);
+      tmpTree = StructByDPRIMTree(aveDiscMatrix, ranking, makeCanonical);
+      free(ranking);
+      ranking = tmpTree->refRankingArray();
+      delete tmpTree;
+      tmpTree = StructByDPRIMTree(aveDiscMatrix, ranking, makeCanonical);
+      curLogProb = tmpTree->logProbability(aveDiscMatrixAsDouble);
+      rand = (runif(1))[0];
+      if(exp(-inverseTemp*(lastLogProb - curLogProb)) > rand) {
+        savedTrees[t] = tmpTree;
+        lastLogProb = curLogProb;
+        break;
+      }
+    }
+    if(bestLogProb < lastLogProb) {
+      bestTree = savedTrees[t];
+      bestLogProb = lastLogProb;
+    }
+  }
+  free(ranking);
+  free(aveDiscMatrixAsDouble);
+  
+  NumericMatrix treeMatrix = RIMTreeToMatrix(bestTree);
+  for(int i=0; i < maxIter+1; i++) {
+    delete savedTrees[i];
+  }
+  return(treeMatrix);
+}
 
 
 
