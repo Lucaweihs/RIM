@@ -78,11 +78,11 @@ RIM::RIMTree* RIMTreeFromList(List rimNodesList) {
 
     newNode = new RIM::RIMNode(theta, rank);
     rimNodes[i] = newNode;
-    if(leftChildIndex <= i || rightChildIndex <= i) {
-      printf("ERROR: RIMTreeFromList expects children to come after parents in input list.\n");
-      std::exit(1);
-    }
     if(!isLeaf) {
+      if(leftChildIndex <= i || rightChildIndex <= i) {
+        printf("ERROR: RIMTreeFromList expects children to come after parents in input list.\n");
+        std::exit(1);
+      }
       newNode->attachLeft(rimNodes[leftChildIndex]);
       newNode->attachRight(rimNodes[rightChildIndex]);
     }
