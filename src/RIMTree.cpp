@@ -320,7 +320,7 @@ namespace RIM {
         for(int i=0; i < L; i++) {
           ind1 = leftRanking->currentValue();
           leftRanking->next();
-          for(int j=0; j<R; j++) {
+          for(int j=0; j < R; j++) {
             ind2 = rightRanking->currentValue();
             rightRanking->next();
             //printf("%d %d \n", ind1, ind2);
