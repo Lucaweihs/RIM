@@ -12,7 +12,6 @@
 #include<stdlib.h>
 #include<cmath>
 #include"RIMNode.cpp"
-#include"PartitionCache.cpp"
 
 namespace RIM {
   class RIMTree {
@@ -23,28 +22,7 @@ namespace RIM {
       RIMNode* root; // Root of the tree
       int* discMat; // Discrepancy matrix of the tree's reference permutation
                     // with respect to the identity permutation.
-      PartitionCache* pc;
       int numLeaves; // Number of leaves in the tree.
-
-      /***
-       * Deprecated in current implmentation
-       ***/
-      static int getMaxNLimitParts(RIMNode* node, int* n, int* limit, int* parts) {
-        if(node->left == NULL && node->right==NULL) {
-          *n = std::max(*n, 1);
-          *limit = std::max(*limit, 1);
-          *parts = std::max(*parts, 1);
-          return(1);
-        }
-
-        int leftSize = getMaxNLimitParts(node->left, n, limit, parts);
-        int rightSize = getMaxNLimitParts(node->right, n, limit, parts);
-
-        *n = std::max(*n, leftSize*rightSize);
-        *limit = std::max(*limit, leftSize);
-        *parts = std::max(*parts, rightSize);
-        return(rightSize+leftSize+1);
-      }
 
       RIM::List<int>* randomRankingHelper(RIM::RIMNode* currentNode, RIM::List<double>* rands) {
         if(currentNode->left == NULL && currentNode->right == NULL) {
@@ -54,7 +32,6 @@ namespace RIM {
         }
         RIM::List<int>* leftRanking = randomRankingHelper(currentNode->left, rands);
         RIM::List<int>* rightRanking = randomRankingHelper(currentNode->right, rands);
-        //printf("rawr2\n");
         int L = leftRanking->length();
         int R = rightRanking->length();
 
@@ -82,24 +59,6 @@ namespace RIM {
           }
         }
         free(zMatrix);
-
-        /*
-        // Old way of doing it
-        int maxInversions = leftRanking->length()*rightRanking->length();
-        double Z = gaussianPoly(leftRanking->length(), rightRanking->length(), currentNode->theta);
-        int numInversions = -1;
-        double rand = rands->currentValue();
-        rands->next();
-
-        while(rand > 0) {
-          numInversions += 1;
-          rand -= exp(-1.0*(currentNode->theta)*numInversions)*pc->countPartitions(numInversions, leftRanking->length(), rightRanking->length())/Z;
-        }
-
-        rand = rands->currentValue();
-        rands->next();
-        RIM::List<int>* partition = pc->randomPartition(rand, numInversions, leftRanking->length(), rightRanking->length());
-        */
 
         leftRanking->joinWithPartition(rightRanking, partition);
         delete rightRanking;
@@ -171,18 +130,12 @@ namespace RIM {
         numLeaves = rankingList.length();
         discMat = discrepancyMatix(rankingArray, 1, numLeaves);
         free(rankingArray);
-
-        int n, limit, parts;
-        n = 0; limit = 0; parts = 0;
-        getMaxNLimitParts(root, &n, &limit, &parts);
-        pc = new PartitionCache(n, limit, parts);
       }
 
       ~RIMTree() {
         root->deleteAncestors();
         delete root;
         free(discMat);
-        delete pc;
       }
 
       RIMNode* getRoot() {
@@ -228,10 +181,6 @@ namespace RIM {
           printf("\nERROR: Not enough random numbers inputted to randomRanking.");
           std::exit(1);
         }
-        // Old Way
-        //if(2*(l->length()-1) != rands->length()) {
-        //  std::exit(1);
-        //}
         return(l);
       }
 

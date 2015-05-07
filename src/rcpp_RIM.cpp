@@ -139,21 +139,6 @@ NumericMatrix sampleFromRIM(NumericVector numSamplesVec, List rimNodesList) {
     delete rands;
   }
 
-  /* // Old way of doing it
-  for(int i=0; i < numSamples; i++) {
-    randsVector = runif(2*(numLeafNodes - 1));
-    rands = new RIM::List<double>();
-    for(int j=0; j < 2*(numLeafNodes - 1); j++) {
-      rands->appendValue(randsVector[j]);
-    }
-    ranking = tree->randomRanking(rands);
-
-    ranking->restart();
-    for(int j=0; j<numLeafNodes; j++) {
-      rankings(i,j) = ranking->currentValue();
-      ranking->next();
-    }
-  }*/
   delete tree;
   return rankings;
 }
