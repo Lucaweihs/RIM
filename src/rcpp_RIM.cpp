@@ -468,37 +468,41 @@ NumericMatrix SASearch(NumericMatrix aveDiscMatrix, NumericVector refRanking, do
     }
   }
 
-  // An array of saved RIM trees
-  RIM::RIMTree* savedTrees[maxIter+1];
-  // Create the first tree from the input ranking.
-  savedTrees[0] = StructByDPRIMTree(aveDiscMatrix, ranking, makeCanonical);
+// Create the first tree from the input ranking.
+  RIM::RIMTree* curTree = StructByDPRIMTree(aveDiscMatrix, ranking, makeCanonical);
   RIM::RIMTree* tmpTree;
-  RIM::RIMTree* bestTree = savedTrees[0];
+  RIM::RIMTree* bestTree = curTree;
 
-  double lastLogProb = savedTrees[0]->logProbability(aveDiscMatrixAsDouble);
+  double lastLogProb = curTree->logProbability(aveDiscMatrixAsDouble);
   double bestLogProb = lastLogProb;
-  double curLogProb;
+  double tmpLogProb;
   double rand;
   // The loop here is a direct translation of the algorithm SASearch of Meek and
   // Meila (2014), see the paper for more detail.
   for(int t=1; t <= maxIter; t++) {
     while(true) {
-      sampleOneFromRIMTree(savedTrees[t-1], ranking);
+      sampleOneFromRIMTree(curTree, ranking);
       tmpTree = StructByDPRIMTree(aveDiscMatrix, ranking, makeCanonical);
       free(ranking);
       ranking = tmpTree->refRankingArray();
       delete tmpTree;
       tmpTree = StructByDPRIMTree(aveDiscMatrix, ranking, makeCanonical);
-      curLogProb = tmpTree->logProbability(aveDiscMatrixAsDouble);
+      tmpLogProb = tmpTree->logProbability(aveDiscMatrixAsDouble);
       rand = (runif(1))[0];
-      if(exp(-inverseTemp*(lastLogProb - curLogProb)) > rand) {
-        savedTrees[t] = tmpTree;
-        lastLogProb = curLogProb;
+      if(exp(-inverseTemp*(lastLogProb - tmpLogProb)) > rand) {
+        if(bestTree != curTree) {
+          // If curTree was the best tree then don't delete it now, it will
+          // be deleted below.
+          delete curTree;
+        }
+        curTree = tmpTree;
+        lastLogProb = tmpLogProb;
         break;
       }
     }
     if(bestLogProb < lastLogProb) {
-      bestTree = savedTrees[t];
+      delete bestTree;
+      bestTree = curTree;
       bestLogProb = lastLogProb;
     }
   }
@@ -506,8 +510,11 @@ NumericMatrix SASearch(NumericMatrix aveDiscMatrix, NumericVector refRanking, do
   free(aveDiscMatrixAsDouble);
 
   NumericMatrix treeMatrix = RIMTreeToMatrix(bestTree);
-  for(int i=0; i < maxIter+1; i++) {
-    delete savedTrees[i];
+  if(bestTree == curTree) {
+    delete bestTree;
+  } else {
+    delete curTree;
+    delete bestTree;
   }
   return(treeMatrix);
 }

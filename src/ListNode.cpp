@@ -10,12 +10,12 @@ namespace RIM {
       ListNode<T>* prev;
       ListNode<T>* next;
       T value;
-      
+
       ListNode() {
         prev = this;
         next = this;
       }
-      
+
       ListNode(T val) {
         prev = this;
         next = this;

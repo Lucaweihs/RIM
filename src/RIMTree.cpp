@@ -1,7 +1,13 @@
+/*****
+ * The main class that encodes all the necessary structure of a RIM tree model.
+ * Includes all of the necessary functions to initialize, transform to
+ * canonical form, find MLEs of theta values, generate samples, and query for
+ * the log probability of the model given data.
+ *****/
+
 #ifndef RIM_RIMTree
 #define RIM_RIMTree
 
-//#include<Rcpp.h>
 #include<stdio.h>
 #include<stdlib.h>
 #include<cmath>
@@ -11,13 +17,18 @@
 namespace RIM {
   class RIMTree {
     private:
-      static const int MAX_ITER_DEFAULT = 100;
-      static const double TOL_DEFAULT = .000001;
-      RIMNode* root;
-      int* discMat;
+      static const int MAX_ITER_DEFAULT = 100; // Iterations when finding MLE for theta values
+      static const double TOL_DEFAULT = .00001; // Tolerance in grad descent for finding MLE
+                                                // theta values.
+      RIMNode* root; // Root of the tree
+      int* discMat; // Discrepancy matrix of the tree's reference permutation
+                    // with respect to the identity permutation.
       PartitionCache* pc;
-      int numLeaves;
+      int numLeaves; // Number of leaves in the tree.
 
+      /***
+       * Deprecated in current implmentation
+       ***/
       static int getMaxNLimitParts(RIMNode* node, int* n, int* limit, int* parts) {
         if(node->left == NULL && node->right==NULL) {
           *n = std::max(*n, 1);
