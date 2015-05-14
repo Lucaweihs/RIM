@@ -17,7 +17,7 @@ namespace RIM {
   class RIMTree {
     private:
       static const int MAX_ITER_DEFAULT = 100; // Iterations when finding MLE for theta values
-      static const double TOL_DEFAULT = .00001; // Tolerance in grad descent for finding MLE
+      static const double TOL_DEFAULT = .0001; // Tolerance in grad descent for finding MLE
                                                 // theta values.
       RIMNode* root; // Root of the tree
       int* discMat; // Discrepancy matrix of the tree's reference permutation
@@ -468,28 +468,26 @@ namespace RIM {
        ***/
       static double mlTheta(int L, int R, double aveDisc, double theta, int maxIter, double tol) {
         int i = 0;
-        double lastScore = score(L, R, aveDisc, theta);
-        double curScore, grad;
+        int k = 0;
+        double lastScore, grad;
+        double curScore = score(L, R, aveDisc, theta);
         // A standard gradient descent algorithm with an Armijo line search.
-        while(true) {
+        for(i = 0; i < maxIter; i++) {
+          lastScore = curScore;
           grad = gradScore(L, R, aveDisc, theta);
           curScore = score(L, R, aveDisc, theta - grad);
-          while(curScore > lastScore) {
+          k = 0;
+          while(curScore > lastScore && ++k < 100) {
             grad = grad/2;
             curScore = score(L, R, aveDisc, theta - grad);
           }
           theta = theta - grad;
-          i++;
-          if(i != 1 && 1 - curScore/lastScore < tol) {
-            return(theta);
-          } else {
-            lastScore = curScore;
-          }
-          if(i >= maxIter) {
-            printf("WARNING: Maximum Iterations reached!\n");
+          if(1 - curScore/lastScore < tol) {
             return(theta);
           }
         }
+        printf("WARNING: Maximum Iterations reached!\n");
+        return(theta);
       }
 
       /***

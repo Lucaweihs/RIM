@@ -101,7 +101,7 @@ RIM::RIMTree* RIMTreeFromList(List rimNodesList) {
  *         a single draw from the RIM.
  ***/
 // [[Rcpp::export]]
-NumericMatrix sampleFromRIM(NumericVector numSamplesVec, List rimNodesList) {
+NumericMatrix RCPPSampleFromRIM(NumericVector numSamplesVec, List rimNodesList) {
   int numNodesTotal = rimNodesList.length();
   int numLeafNodes = (numNodesTotal+1)/2; // Since #nodes in binary tree is 2*numLeaves-1
 
@@ -146,29 +146,29 @@ NumericMatrix sampleFromRIM(NumericVector numSamplesVec, List rimNodesList) {
 /***
  * TO BE DETERMINED IF NECESSARY
  ***/
-// [[Rcpp::export]]
-NumericVector RIMThetaMLEs(NumericMatrix samples, List rimNodesList) {
-  RIM::RIMTree* tree = RIMTreeFromList(rimNodesList);
-  int* samplesMat = (int*) malloc(sizeof(int)*samples.nrow()*samples.ncol());
-  for(int i=0; i<samples.nrow(); i++) {
-    for(int j=0; j<samples.ncol(); j++) {
-      samplesMat[i*samples.ncol() + j] = samples(i,j);
-    }
-  }
-  tree->mlThetaTree(samplesMat, samples.nrow()) ;
-  RIM::List<double>* preOrderThetasList = tree->preOrderThetasList();
-  NumericVector preOrderThetasVector(preOrderThetasList->length());
-  preOrderThetasList->restart();
-  for(int i=0; i<preOrderThetasList->length(); i++) {
-    preOrderThetasVector[i] = preOrderThetasList->currentValue();
-    preOrderThetasList->next();
-  }
-
-  free(samplesMat);
-  delete preOrderThetasList;
-  delete tree;
-  return(preOrderThetasVector);
-}
+//// [[Rcpp::RCPPStructByDP]]
+//NumericVector RIMThetaMLEs(NumericMatrix samples, List rimNodesList) {
+//  RIM::RIMTree* tree = RIMTreeFromList(rimNodesList);
+//  int* samplesMat = (int*) malloc(sizeof(int)*samples.nrow()*samples.ncol());
+//  for(int i=0; i<samples.nrow(); i++) {
+//    for(int j=0; j<samples.ncol(); j++) {
+//      samplesMat[i*samples.ncol() + j] = samples(i,j);
+//    }
+//  }
+//  tree->mlThetaTree(samplesMat, samples.nrow()) ;
+//  RIM::List<double>* preOrderThetasList = tree->preOrderThetasList();
+//  NumericVector preOrderThetasVector(preOrderThetasList->length());
+//  preOrderThetasList->restart();
+//  for(int i=0; i<preOrderThetasList->length(); i++) {
+//    preOrderThetasVector[i] = preOrderThetasList->currentValue();
+//    preOrderThetasList->next();
+//  }
+//
+//  free(samplesMat);
+//  delete preOrderThetasList;
+//  delete tree;
+//  return(preOrderThetasVector);
+//}
 
 /***
  * Creates the averaged discrepancy matrix correpsonding to the input samples
@@ -179,7 +179,7 @@ NumericVector RIMThetaMLEs(NumericMatrix samples, List rimNodesList) {
  * @return the discrepancy matrix as a NumericMatrix.
  ***/
 // [[Rcpp::export]]
-NumericMatrix averageDiscMatrix(NumericMatrix samples) {
+NumericMatrix RCPPAverageDiscMatrix(NumericMatrix samples) {
   int numLeaves = samples.ncol();
 
   // A matrix of integers that we will copy samples into, this is necessary
@@ -293,7 +293,7 @@ NumericMatrix RIMTreeToMatrix(RIM::RIMTree* tree) {
  * the ordering of the leaves of the tree).
  *
  * @param aveDiscMatrix the average discrepancy matrix corresponding to data.
- *        This should be created by the function averageDiscMatrix.
+ *        This should be created by the function RCPPAverageDiscMatrix.
  * @param refRanking an integer array of length equaling the number of items
  *        being ranked (i.e. the number of rows/columns of aveDiscMatrix).
  * @param makeCanonical if true then the algorithmenforces that the output
@@ -333,7 +333,7 @@ RIM::RIMTree* StructByDPRIMTree(NumericMatrix aveDiscMatrix, int* refRanking, bo
         L = k - j + 1;
         R = m - k;
         // These values for theta should probably not be hard coded.
-        theta = RIM::RIMTree::mlTheta(L, R, aveV, 0.1, 1000, .00001);
+        theta = RIM::RIMTree::mlTheta(L, R, aveV, 0.1, 2000, .0001);
         s = costMatrix[(j-1)*n + (k-1)] + costMatrix[k*n + (m-1)] + RIM::RIMTree::score(L, R, aveV, theta);
         if(s < costMatrix[(j-1)*n+(m-1)]) {
           costMatrix[(j-1)*n + (m-1)] = s;
@@ -359,7 +359,7 @@ RIM::RIMTree* StructByDPRIMTree(NumericMatrix aveDiscMatrix, int* refRanking, bo
  * For how this matrix is formatted see RIMTreeToMatrix.
  *
  * @param aveDiscMatrix the average discrepancy matrix corresponding to data.
- *        This should be created by the function averageDiscMatrix.
+ *        This should be created by the function RCPPAverageDiscMatrix.
  * @param refRanking an integer array of length equaling the number of items
  *        being ranked (i.e. the number of rows/columns of aveDiscMatrix).
  * @param makeCanonical if true then the algorithmenforces that the output
@@ -369,7 +369,7 @@ RIM::RIMTree* StructByDPRIMTree(NumericMatrix aveDiscMatrix, int* refRanking, bo
  *         the function RIMTreeToMatrix for how this matrix is formatted.
  ***/
 // [[Rcpp::export]]
-NumericMatrix StructByDP(NumericMatrix aveDiscMatrix, NumericVector refRanking, bool makeCanonical) {
+NumericMatrix RCPPStructByDP(NumericMatrix aveDiscMatrix, NumericVector refRanking, bool makeCanonical) {
   // Convert in input NumericVector refRanking to an int* as this is what
   // is expected by StructByDPRIMTree.
   int* refRankingArray = (int*) malloc(sizeof(int)*aveDiscMatrix.ncol());
@@ -420,7 +420,7 @@ void sampleOneFromRIMTree(RIM::RIMTree* tree, int* rankingArray) {
  * RIMTreeToMatrix for thow this matrix is formatted).
  *
  * @param aveDiscMatrix the average discrepancy matrix corresponding to data.
- *        This should be created by the function averageDiscMatrix.
+ *        This should be created by the function RCPPAverageDiscMatrix.
  * @param refRanking an integer array of length equaling the number of items
  *        being ranked (i.e. the number of rows/columns of aveDiscMatrix). This
  *        acts as the initial starting point of the search.
@@ -435,7 +435,7 @@ void sampleOneFromRIMTree(RIM::RIMTree* tree, int* rankingArray) {
  *         matrix See the function RIMTreeToMatrix for how this matrix is formatted.
  ***/
 // [[Rcpp::export]]
-NumericMatrix SASearch(NumericMatrix aveDiscMatrix, NumericVector refRanking, double inverseTemp, int maxIter, bool makeCanonical) {
+NumericMatrix RCPPSASearch(NumericMatrix aveDiscMatrix, NumericVector refRanking, double inverseTemp, int maxIter, bool makeCanonical) {
   int numLeafNodes = aveDiscMatrix.nrow();
   // We will require the reference ranking to be a int vector so we put it in
   // that form now.
@@ -509,13 +509,13 @@ NumericMatrix SASearch(NumericMatrix aveDiscMatrix, NumericVector refRanking, do
  * corresponding to the data.
  *
  * @param aveDiscMatrix the average discrepancy matrix corresponding to data.
- *        This should be created by the function averageDiscMatrix.
+ *        This should be created by the function RCPPAverageDiscMatrix.
  * @param rimNodeList see the function RIMTreeFromList for the appropriate
  *        formatting of this list.
  * @return the log probability of the tree given the data.
  ***/
 // [[Rcpp::export]]
-double logProbOfTree(List rimNodesList, NumericMatrix aveDiscMatrix) {
+double RCPPLogProbOfTree(List rimNodesList, NumericMatrix aveDiscMatrix) {
   // We require that the aveDiscMatrix is a matrix of doubles, we transform
   // it into this form.
   int numLeafNodes = aveDiscMatrix.nrow();
