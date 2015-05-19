@@ -86,7 +86,7 @@ structByDP <- function(aveDiscMatrix, refRanking, makeCanonical) {
   return(RCPPStructByDP(aveDiscMatrix, refRanking, makeCanonical))
 }
 
-SASearch <- function(aveDiscMatrix, refRanking, inverseTemp, maxIter, makeCanonical) {
+SASearch <- function(aveDiscMatrix, refRanking, inverseTemp, maxIter, makeCanonical, verbose=F) {
   if(!isValidAveDiscMatrix(aveDiscMatrix)) {
     stop("ERROR: incorrectly formatted aveDiscMatrix inputted to SASearch\n")
   }
@@ -102,7 +102,7 @@ SASearch <- function(aveDiscMatrix, refRanking, inverseTemp, maxIter, makeCanoni
   if(!is.logical(makeCanonical)) {
     stop("ERROR: input makeCanonical for SASearch is not a logical value.\n")
   }
-  return(RCPPSASearch(aveDiscMatrix, refRanking, inverseTemp, maxIter, makeCanonical))
+  return(RCPPSASearch(aveDiscMatrix, refRanking, inverseTemp, maxIter, makeCanonical, verbose))
 }
 
 logProbRIM <- function(rimNodesList, aveDiscMatrix) {
@@ -110,8 +110,17 @@ logProbRIM <- function(rimNodesList, aveDiscMatrix) {
     stop("ERROR: incorrectly formatted aveDiscMatrix inputted to logProbRIM\n")
   }
   if(!isValidRIMNodesList(rimNodesList)) {
-    stop("ERROR: incorrectly formatted rimNodesList inputted to SASearch\n")
+    stop("ERROR: incorrectly formatted rimNodesList inputted to logProbRIM\n")
   }
   return(RCPPLogProbRIM(rimNodesList, aveDiscMatrix))
 }
 
+thetaMLERIM <- function(rimNodesList, aveDiscMatrix) {
+  if(!isValidAveDiscMatrix(aveDiscMatrix)) {
+    stop("ERROR: incorrectly formatted aveDiscMatrix inputted to thetaMLERIM\n")
+  }
+  if(!isValidRIMNodesList(rimNodesList)) {
+    stop("ERROR: incorrectly formatted rimNodesList inputted to thetaMLERIM\n")
+  }
+  return(RCPPthetaMLERIM(rimNodesList, aveDiscMatrix))
+}

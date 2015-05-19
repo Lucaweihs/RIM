@@ -16,7 +16,7 @@
 namespace RIM {
   class RIMTree {
     private:
-      static const int MAX_ITER_DEFAULT = 100; // Iterations when finding MLE for theta values
+      static const int MAX_ITER_DEFAULT = 5000; // Iterations when finding MLE for theta values
       static const double TOL_DEFAULT = .0001; // Tolerance in grad descent for finding MLE
                                                 // theta values.
       RIMNode* root; // Root of the tree
@@ -164,7 +164,7 @@ namespace RIM {
         }
 
         // Find the ML theta value and set curNode's theta to be the value.
-        curNode->theta = mlTheta(leftRanking->length(), rightRanking->length(), aveDisc, curNode->theta, MAX_ITER_DEFAULT, TOL_DEFAULT);
+        curNode->theta = mlTheta(leftRanking->length(), rightRanking->length(), aveDisc, 0, MAX_ITER_DEFAULT, TOL_DEFAULT);
 
         // Append the rightRanking to the end of leftRanking and then
         // return the left ranking.
@@ -486,7 +486,7 @@ namespace RIM {
             return(theta);
           }
         }
-        printf("WARNING: Maximum Iterations reached!\n");
+        //printf("WARNING: Maximum Iterations reached!\n");
         return(theta);
       }
 

@@ -144,33 +144,6 @@ NumericMatrix RCPPSampleFromRIM(NumericVector numSamplesVec, List rimNodesList) 
 }
 
 /***
- * TO BE DETERMINED IF NECESSARY
- ***/
-//// [[Rcpp::RCPPStructByDP]]
-//NumericVector RIMThetaMLEs(NumericMatrix samples, List rimNodesList) {
-//  RIM::RIMTree* tree = RIMTreeFromList(rimNodesList);
-//  int* samplesMat = (int*) malloc(sizeof(int)*samples.nrow()*samples.ncol());
-//  for(int i=0; i<samples.nrow(); i++) {
-//    for(int j=0; j<samples.ncol(); j++) {
-//      samplesMat[i*samples.ncol() + j] = samples(i,j);
-//    }
-//  }
-//  tree->mlThetaTree(samplesMat, samples.nrow()) ;
-//  RIM::List<double>* preOrderThetasList = tree->preOrderThetasList();
-//  NumericVector preOrderThetasVector(preOrderThetasList->length());
-//  preOrderThetasList->restart();
-//  for(int i=0; i<preOrderThetasList->length(); i++) {
-//    preOrderThetasVector[i] = preOrderThetasList->currentValue();
-//    preOrderThetasList->next();
-//  }
-//
-//  free(samplesMat);
-//  delete preOrderThetasList;
-//  delete tree;
-//  return(preOrderThetasVector);
-//}
-
-/***
  * Creates the averaged discrepancy matrix correpsonding to the input samples
  * with respect to the reference permutation being the identity ranking.
  *
@@ -333,7 +306,7 @@ RIM::RIMTree* StructByDPRIMTree(NumericMatrix aveDiscMatrix, int* refRanking, bo
         L = k - j + 1;
         R = m - k;
         // These values for theta should probably not be hard coded.
-        theta = RIM::RIMTree::mlTheta(L, R, aveV, 0.1, 2000, .0001);
+        theta = RIM::RIMTree::mlTheta(L, R, aveV, 0, 20000, .00001);
         s = costMatrix[(j-1)*n + (k-1)] + costMatrix[k*n + (m-1)] + RIM::RIMTree::score(L, R, aveV, theta);
         if(s < costMatrix[(j-1)*n+(m-1)]) {
           costMatrix[(j-1)*n + (m-1)] = s;
@@ -435,7 +408,7 @@ void sampleOneFromRIMTree(RIM::RIMTree* tree, int* rankingArray) {
  *         matrix See the function RIMTreeToMatrix for how this matrix is formatted.
  ***/
 // [[Rcpp::export]]
-NumericMatrix RCPPSASearch(NumericMatrix aveDiscMatrix, NumericVector refRanking, double inverseTemp, int maxIter, bool makeCanonical) {
+NumericMatrix RCPPSASearch(NumericMatrix aveDiscMatrix, NumericVector refRanking, double inverseTemp, int maxIter, bool makeCanonical, bool verbose) {
   int numLeafNodes = aveDiscMatrix.nrow();
   // We will require the reference ranking to be a int vector so we put it in
   // that form now.
@@ -465,6 +438,9 @@ NumericMatrix RCPPSASearch(NumericMatrix aveDiscMatrix, NumericVector refRanking
   // The loop here is a direct translation of the algorithm SASearch of Meek and
   // Meila (2014), see the paper for more detail.
   for(int t=1; t <= maxIter; t++) {
+    if(verbose && (t % 50) == 0) {
+      Rprintf("t=%d\n", t);
+    }
     while(true) {
       sampleOneFromRIMTree(curTree, ranking);
       tmpTree = StructByDPRIMTree(aveDiscMatrix, ranking, makeCanonical);
@@ -494,7 +470,12 @@ NumericMatrix RCPPSASearch(NumericMatrix aveDiscMatrix, NumericVector refRanking
   free(ranking);
   free(aveDiscMatrixAsDouble);
 
-  NumericMatrix treeMatrix = RIMTreeToMatrix(bestTree);
+  ranking = bestTree->refRankingArray();
+  tmpTree = StructByDPRIMTree(aveDiscMatrix, ranking, makeCanonical);
+
+  NumericMatrix treeMatrix = RIMTreeToMatrix(tmpTree);
+  free(ranking);
+  delete tmpTree;
   if(bestTree == curTree) {
     delete bestTree;
   } else {
@@ -515,7 +496,7 @@ NumericMatrix RCPPSASearch(NumericMatrix aveDiscMatrix, NumericVector refRanking
  * @return the log probability of the tree given the data.
  ***/
 // [[Rcpp::export]]
-double RCPPLogProbOfTree(List rimNodesList, NumericMatrix aveDiscMatrix) {
+double RCPPLogProbRIM(List rimNodesList, NumericMatrix aveDiscMatrix) {
   // We require that the aveDiscMatrix is a matrix of doubles, we transform
   // it into this form.
   int numLeafNodes = aveDiscMatrix.nrow();
@@ -533,6 +514,31 @@ double RCPPLogProbOfTree(List rimNodesList, NumericMatrix aveDiscMatrix) {
   return(logProb);
 }
 
+/***
+ * Takes an input averaged discrepancy matrix (from the data), and a RIM as a list
+ * (see RIMTreeFromList for how this list should be formatted) and outputs a
+ * NumericMatrix of the tree with theta values equalling the MLE theta values
+ * for the data.
+ *
+ * @param rimNodesList a list representing the RIM tree.
+ * @param aveDiscMatrix an averaged discrepancy matrix from the data.
+ * @return a NumericMatrix representing the RIM tree with optimized theta values.
+ ***/
+// [[Rcpp::export]]
+NumericMatrix RCPPthetaMLERIM(List rimNodesList, NumericMatrix aveDiscMatrix) {
+  int numLeafNodes = aveDiscMatrix.ncol();
+  double* aveDiscMatrixAsDouble = (double*) malloc(sizeof(double)*numLeafNodes*numLeafNodes);
+  for(int i=0; i < numLeafNodes; i++) {
+    for(int j=0; j < numLeafNodes; j++) {
+      aveDiscMatrixAsDouble[i*numLeafNodes + j] = aveDiscMatrix(i,j);
+    }
+  }
 
+  RIM::RIMTree* tree = RIMTreeFromList(rimNodesList);
+  tree->mlThetaTree(aveDiscMatrixAsDouble);
 
-
+  NumericMatrix treeMat = RIMTreeToMatrix(tree);
+  delete tree;
+  free(aveDiscMatrixAsDouble);
+  return(treeMat);
+}
