@@ -452,6 +452,7 @@ namespace RIM {
         return(logProb);
       }
 
+      /***
        * Finds the ML theta value for the given parameters via gradient descent.
        * See Meek and Meila (2014) for details.
        *
