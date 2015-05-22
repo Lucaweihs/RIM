@@ -306,7 +306,7 @@ RIM::RIMTree* StructByDPRIMTree(NumericMatrix aveDiscMatrix, int* refRanking, bo
         L = k - j + 1;
         R = m - k;
         // These values for theta should probably not be hard coded.
-        theta = RIM::RIMTree::mlTheta(L, R, aveV, 0, 20000, .00001);
+        theta = RIM::RIMTree::mlTheta(L, R, aveV, 0, 200, .00001);
         s = costMatrix[(j-1)*n + (k-1)] + costMatrix[k*n + (m-1)] + RIM::RIMTree::score(L, R, aveV, theta);
         if(s < costMatrix[(j-1)*n+(m-1)]) {
           costMatrix[(j-1)*n + (m-1)] = s;

@@ -16,8 +16,8 @@
 namespace RIM {
   class RIMTree {
     private:
-      static const int MAX_ITER_DEFAULT = 5000; // Iterations when finding MLE for theta values
-      static const double TOL_DEFAULT = .0001; // Tolerance in grad descent for finding MLE
+      static const int MAX_ITER_DEFAULT = 500; // Iterations when finding MLE for theta values
+      static const double TOL_DEFAULT = .000001; // Tolerance in grad descent for finding MLE
                                                 // theta values.
       RIMNode* root; // Root of the tree
       int* discMat; // Discrepancy matrix of the tree's reference permutation
@@ -452,7 +452,6 @@ namespace RIM {
         return(logProb);
       }
 
-      /***
        * Finds the ML theta value for the given parameters via gradient descent.
        * See Meek and Meila (2014) for details.
        *
@@ -466,7 +465,7 @@ namespace RIM {
        *        should usually be around 10^(-5).
        * @return the ML theta value
        ***/
-      static double mlTheta(int L, int R, double aveDisc, double theta, int maxIter, double tol) {
+      static double mlThetaOld(int L, int R, double aveDisc, double theta, int maxIter, double tol) {
         int i = 0;
         int k = 0;
         double lastScore, grad;
@@ -491,6 +490,64 @@ namespace RIM {
       }
 
       /***
+       * Finds the ML theta value for the given parameters via gradient descent.
+       * See Meek and Meila (2014) for details.
+       *
+       * @param L the number of left rankings.
+       * @param R the number of right rankings.
+       * @param aveDisc the sufficient statistic for the node.
+       * @param theta the initializing theta value.
+       * @param maxIter the maximum number of iterations to run the gradient
+       *        descent.
+       * @param tol the tolerance after which to stop the graident descent.
+       *        should usually be around 10^(-5).
+       * @return the ML theta value
+       ***/
+      static double mlTheta(int L, int R, double aveDisc, double theta, int maxIter, double tol) {
+        int i = 0;
+        int k = 0;
+        double expNegTheta = exp(-theta);
+        double expNegThetaInit = expNegTheta;
+        double tmpExpNegTheta;
+        double lastScore, grad;
+        double curScore = score(L, R, aveDisc, theta);
+        double tmpScore;
+        // A standard gradient descent algorithm with an Armijo line search.
+        for(i = 0; i < maxIter; i++) {
+          lastScore = curScore;
+          grad = gradScoreExpNegTheta(L, R, aveDisc, expNegTheta)/sqrt(i+1);
+          curScore = score(L, R, aveDisc, -log(std::max(expNegTheta - grad, .000001)));
+          tmpScore = curScore;
+          if(curScore < lastScore) {
+            while(true) {
+              grad = grad*2;
+              tmpExpNegTheta = std::max(expNegTheta - grad, .000001);
+              tmpScore = score(L, R, aveDisc, -log(tmpExpNegTheta));
+              if(tmpScore < curScore) {
+                curScore = tmpScore;
+              } else {
+                grad = grad/2;
+                break;
+              }
+            }
+          }
+          k = 0;
+          while(curScore > lastScore && ++k < 100) {
+            grad = grad/2;
+            tmpExpNegTheta = std::max(expNegTheta - grad, .000001);
+            curScore = score(L, R, aveDisc, -log(tmpExpNegTheta));
+          }
+          expNegTheta = std::max(expNegTheta - grad, .000001);
+          if(1 - curScore/lastScore < tol && i>5) {
+            return(-log(expNegTheta));
+          }
+        }
+        printf("WARNING: Maximum iterations reached in theta optimization! With parameters:\n");
+        printf("L=%d, R=%d, aveDisc=%f, expNegThetaInit=%f, expNegThetaReturned=%f\n", L, R, aveDisc, expNegThetaInit, expNegTheta);
+        return(-log(expNegTheta));
+      }
+
+      /***
        * Returns the gradient of the score of a node with the given parameters.
        *
        * @param L the number of left rankings.
@@ -512,6 +569,37 @@ namespace RIM {
         }
       }
 
+       /***
+       * Returns the gradient of the score of a node with the given parameters
+       * when the input parameter to be differentiated is exp(-theta) rather
+       * than theta.
+       *
+       * @param L the number of left rankings.
+       * @param R the number of right rankings.
+       * @param aveDisc the sufficient statistic associated with the node.
+       * @param expNegTheta the exp(-theta) value at which to take the gradient.
+       * @return the gradient of the score function at exp(-theta).
+       ***/
+      static double gradScoreExpNegTheta(int L, int R, double aveDisc, double expNegTheta) {
+        //printf("L=%d, R=%d, aveDisc=%f, expNegTheta=%f\n", L, R, aveDisc, expNegTheta);
+        double gScore = -1/expNegTheta*aveDisc;
+        int n = std::max(L, R);
+        double qi = std::pow(expNegTheta, n);
+        double qiMinusN = 1;
+        if(expNegTheta != 1) {
+          for(int i=n+1; i <= L+R; i++) {
+            qi *= expNegTheta;
+            qiMinusN *= expNegTheta;
+            gScore += -i*(qi/expNegTheta)/(1-qi) + (i-n)*(qiMinusN/expNegTheta)/(1-qiMinusN);
+          }
+          //printf("gScore=%f\n", gScore);
+          return(gScore);
+        } else {
+          //printf("gScoreBefore=%f, R*L/2.0=%f, gScore=%f", gScore, R*L/2.0, gScore + R*L/2.0);
+          return(gScore + R*L/2.0);
+        }
+      }
+
       /***
        * Returns the score of a node with the given parameters.
        *
@@ -522,7 +610,7 @@ namespace RIM {
        * @return the score function evaluated at theta.
        ***/
       static double score(int L, int R, double aveDisc, double theta) {
-        return(theta*aveDisc + log(gaussianPoly(L, R, theta)));
+        return(theta*aveDisc + logGaussianPoly(L, R, theta));
       }
 
       /***
@@ -571,15 +659,16 @@ namespace RIM {
         return(zMatrix);
       }
 
+
       /***
-       * Returns the gaussian polynomial with parameters n=L,m=R,q=exp(-theta).
-       * See Meek and Meila (2014) for more details.
+       * Returns the log of the gaussian polynomial with parameters n=L, m=R,
+       * and q=exp(-theta). See Meek and Meila (2014) for more details.
        *
        * @param L the number of left rankings.
        * @param R the number of right rankings.
        * @param theta the theta value.
        ***/
-      static double gaussianPoly(int L, int R, double theta) {
+      static double logGaussianPoly(int L, int R, double theta) {
         if(L < 0 || R < 0) {
           printf("ERROR: One of L,R<0 in gaussianPoly.\n");
           std::exit(1);
@@ -602,7 +691,19 @@ namespace RIM {
             logG -= log(fabs(1-pow(q, i-n)));
           }
         }
-        return(exp(logG));
+        return(logG);
+      }
+
+      /***
+       * Returns the gaussian polynomial with parameters n=L,m=R,q=exp(-theta).
+       * See Meek and Meila (2014) for more details.
+       *
+       * @param L the number of left rankings.
+       * @param R the number of right rankings.
+       * @param theta the theta value.
+       ***/
+      static double gaussianPoly(int L, int R, double theta) {
+        return(exp(logGaussianPoly(L, R, theta)));
       }
 
       /***
