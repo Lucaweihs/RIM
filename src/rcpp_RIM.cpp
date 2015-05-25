@@ -257,6 +257,7 @@ NumericMatrix RIMTreeToMatrix(RIM::RIMTree* tree) {
       treeMatrixNumeric(i,j) = treeMatrix[i*5 + j];
     }
   }
+  free(treeMatrix);
   return(treeMatrixNumeric);
 }
 
@@ -322,6 +323,9 @@ RIM::RIMTree* StructByDPRIMTree(NumericMatrix aveDiscMatrix, int* refRanking, bo
   if(makeCanonical) {
     tree->transformToCanonical();
   }
+  free(costMatrix);
+  free(backPointers);
+  free(thetas);
   return(tree);
 }
 
@@ -351,6 +355,7 @@ NumericMatrix RCPPStructByDP(NumericMatrix aveDiscMatrix, NumericVector refRanki
   }
   RIM::RIMTree* tree = StructByDPRIMTree(aveDiscMatrix, refRankingArray, makeCanonical);
   NumericMatrix treeMatrix = RIMTreeToMatrix(tree);
+  free(refRankingArray);
   delete tree;
   return(treeMatrix);
 }
@@ -463,6 +468,8 @@ NumericMatrix RCPPSASearch(NumericMatrix aveDiscMatrix, NumericVector refRanking
         curTree = tmpTree;
         lastLogProb = tmpLogProb;
         break;
+      } else {
+        delete tmpTree;
       }
     }
     if(bestLogProb < lastLogProb) {
