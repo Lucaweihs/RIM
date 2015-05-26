@@ -513,16 +513,19 @@ namespace RIM {
         double lastScore, grad;
         double curScore = score(L, R, aveDisc, theta);
         double tmpScore;
+        double maxExpNegTheta = pow(10.0, 14);
+        double minExpNegTheta = pow(10.0, -14);
         // A standard gradient descent algorithm with an Armijo line search.
         for(i = 0; i < maxIter; i++) {
           lastScore = curScore;
           grad = gradScoreExpNegTheta(L, R, aveDisc, expNegTheta)/sqrt(i+1);
-          curScore = score(L, R, aveDisc, -log(std::max(expNegTheta - grad, .000001)));
+          curScore = score(L, R, aveDisc, -log(std::min(std::max(expNegTheta - grad, minExpNegTheta), maxExpNegTheta)));
           tmpScore = curScore;
-          if(curScore < lastScore) {
+          k=0;
+          if(curScore < lastScore && ++k < 100) {
             while(true) {
               grad = grad*2;
-              tmpExpNegTheta = std::max(expNegTheta - grad, .000001);
+              tmpExpNegTheta = std::min(std::max(expNegTheta - grad, minExpNegTheta), maxExpNegTheta);
               tmpScore = score(L, R, aveDisc, -log(tmpExpNegTheta));
               if(tmpScore < curScore) {
                 curScore = tmpScore;
@@ -535,10 +538,10 @@ namespace RIM {
           k = 0;
           while(curScore > lastScore && ++k < 100) {
             grad = grad/2;
-            tmpExpNegTheta = std::max(expNegTheta - grad, .000001);
+            tmpExpNegTheta = std::min(std::max(expNegTheta - grad, minExpNegTheta), maxExpNegTheta);
             curScore = score(L, R, aveDisc, -log(tmpExpNegTheta));
           }
-          expNegTheta = std::max(expNegTheta - grad, .000001);
+          expNegTheta = std::min(std::max(expNegTheta - grad, minExpNegTheta), maxExpNegTheta);
           if(1 - curScore/lastScore < tol && i>5) {
             return(-log(expNegTheta));
           }
