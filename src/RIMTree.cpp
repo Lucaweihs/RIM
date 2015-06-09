@@ -542,7 +542,7 @@ namespace RIM {
             curScore = score(L, R, aveDisc, -log(tmpExpNegTheta));
           }
           expNegTheta = std::min(std::max(expNegTheta - grad, minExpNegTheta), maxExpNegTheta);
-          if(1 - curScore/lastScore < tol && i>5) {
+          if((curScore == lastScore || 1 - curScore/lastScore < tol) && i>5) {
             return(-log(expNegTheta));
           }
         }

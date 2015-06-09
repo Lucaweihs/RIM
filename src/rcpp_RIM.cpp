@@ -444,9 +444,9 @@ NumericMatrix RCPPSASearch(NumericMatrix aveDiscMatrix, NumericVector refRanking
   // The loop here is a direct translation of the algorithm SASearch of Meek and
   // Meila (2014), see the paper for more detail.
   for(int t=1; t <= maxIter; t++) {
-    if(verbose && (t % 50) == 0) {
+    if(verbose && (t % 100) == 0) {
       Rprintf("t=%d\n", t);
-      Rprintf("Average runs before acceptance in last 50=%f\n", runsBeforeAcceptance/50.0);
+      Rprintf("Average runs before acceptance in last 100=%f\n", runsBeforeAcceptance/100.0);
       runsBeforeAcceptance = 0;
     }
     while(true) {
