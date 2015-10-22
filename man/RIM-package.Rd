@@ -20,9 +20,9 @@ License: \tab GPL (>= 2)\cr
 ~~ An overview of how to use the package, including the most important functions ~~
 }
 \author{
-Your Name
+Luca Weihs
 
-Maintainer: Your Name <your@email.com>
+Maintainer: Luca Weihs <lucaw@uw.edu>
 }
 \references{
 ~~ Literature or other references for background information ~~
