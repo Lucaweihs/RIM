@@ -16,8 +16,8 @@
 namespace RIM {
   class RIMTree {
     private:
-      static const int MAX_ITER_DEFAULT = 500; // Iterations when finding MLE for theta values
-      static const double TOL_DEFAULT = .000001; // Tolerance in grad descent for finding MLE
+      static const int MAX_ITER_DEFAULT = 200; // Iterations when finding MLE for theta values
+      static const double TOL_DEFAULT = .00001; // Tolerance in grad descent for finding MLE
                                                 // theta values.
       RIMNode* root; // Root of the tree
       int* discMat; // Discrepancy matrix of the tree's reference permutation
