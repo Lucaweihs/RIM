@@ -1,34 +1,34 @@
-#include <Rcpp.h>
-#include"RIMTree.cpp"
-#include"List.cpp"
-using namespace Rcpp;
+/***
+ * Copyright (C) 2016 Luca Weihs
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+#include "List.h"
+#include "RIMTree.h"
+#include <RcppArmadillo.h>
 
-void printIntMatrix(int* mat, int nrow, int ncol) {
-  for(int i=0; i<nrow; i++) {
-    for(int j=0; j<ncol; j++) {
-      printf("%d ", mat[i*ncol + j]);
-    }
-    printf("\n");
-  }
-}
-void printDoubleMatrix(double* mat, int nrow, int ncol) {
-  for(int i=0; i<nrow; i++) {
-    for(int j=0; j<ncol; j++) {
-      printf("%f ", mat[i*ncol + j]);
-    }
-    printf("\n");
-  }
-}
+using namespace Rcpp;
 
 /***
  * Generates a RIMTree from an input list.
  *
- * @param rimNodeList a Rcpp list that encodes the tree
- *        structure. In particular the list contains numeric
- *        vectors all of length 5. Each vector corresponds to
+ * @param rimNodeMat a matrix that encodes the tree
+ *        structure. In particular the matrix contains must be of dimension
+ *        (number of nodes in RIM) x 5. Each row of the matrix corresponds to
  *        a tree node and it's position in the list corresponds
  *        to the node's numbering. Each vector should have the form
- *        c(left child # + 1, right child # + 1, is leaf boolean, theta, rank)
+ *        c(left child #, right child #, is leaf boolean, theta, rank)
  *        where
  *        - left child # = the number correspond to the left child of the node
  *        - right child # = the number correspond to the right child of the node
@@ -40,38 +40,37 @@ void printDoubleMatrix(double* mat, int nrow, int ncol) {
  *        rank is ignored if the node is not a leaf. Note that the list should
  *        be  ordered topologically so that PARENTS ALWAYS COME BEFORE CHILDREN.
  *        As an example the list:
- *        list(
- *          c(2, 3, 0, -.1, 0),
- *          c(4, 5, 0, .8, 0),
- *          c(6, 7, 0, 1.6, 0),
- *          c(0, 0, 1, 0, 0),
- *          c(0, 0, 1, 0, 1),
- *          c(0, 0, 1, 0, 2),
- *          c(0, 0, 1, 0, 3))
+ *        matrix(c(1, 2, 0, -.1, 0,
+ *                 3, 4, 0, 0.8, 0,
+ *                 5, 6, 0, 1.6, 0,
+ *                 0, 0, 1, 0.0, 0,
+ *                 0, 0, 1, 0.0, 1,
+ *                 0, 0, 1, 0.0, 2,
+ *                 0, 0, 1, 0.0, 3), ncol = 5)
  *        corresponds to a tree with a root node 0, the root having left and right
- *        children as 2,3 respectively. Moreover node 2 has children 3,4 which are
- *        both leaves and node 4 has children 5,6 which are also both leaves. If
- *        traversing the tree in preorder one visits the leaves in the order 3,4,5,6
- *        which corresponds to the ranking 0,1,2,3.
- * @return a pointer to a RIM::RIMTree corresponding to rimNodeList.
+ *        children as 1,2 respectively. Moreover node 1 has children 3,4 which are
+ *        both leaves and node 3 has children 5,6 which are also both leaves. If
+ *        traversing the tree in preorder one visits the leaves in the order
+ *        3,4,5,6 which corresponds to the ranking 0,1,2,3.
+ * @return a pointer to a RIM::RIMTree corresponding to rimNodeMat.
  ***/
-RIM::RIMTree* RIMTreeFromList(List rimNodesList) {
-  int numNodesTotal = rimNodesList.length();
+RIM::RIMTree* RIMTreeFromMat(arma::mat rimNodesMat) {
+  int numNodesTotal = rimNodesMat.n_rows;
   RIM::RIMNode* rimNodes[numNodesTotal];
   bool isLeaf;
   int leftChildIndex, rightChildIndex, rank;
   double theta;
-  int numLeafNodes = (numNodesTotal+1)/2; // Since #nodes in binary tree is 2*numLeaves-1
-  NumericVector y;
+  int numLeafNodes = (numNodesTotal + 1) / 2; // Since #nodes in binary tree is 2*numLeaves-1
+  arma::vec y;
   RIM::RIMNode* newNode;
 
   // A loop that goes through the list and constructs the
   // RIM iteratively. Starts from the end of the list and moves
   // to the front so that children are visited before parents.
-  for(int i=numNodesTotal-1; i >= 0; i--) {
-    y = rimNodesList[i];
-    leftChildIndex = y[0] - 1;
-    rightChildIndex = y[1] - 1;
+  for(int i = numNodesTotal - 1; i >= 0; i--) {
+    y = rimNodesMat.row(i).t();
+    leftChildIndex = y[0];
+    rightChildIndex = y[1];
     isLeaf = (y[2] == 1);
     theta = y[3];
     rank = y[4];
@@ -80,8 +79,8 @@ RIM::RIMTree* RIMTreeFromList(List rimNodesList) {
     rimNodes[i] = newNode;
     if(!isLeaf) {
       if(leftChildIndex <= i || rightChildIndex <= i) {
-        printf("ERROR: RIMTreeFromList expects children to come after parents in input list.\n");
-        std::exit(1);
+        Rcpp::stop("ERROR: RIMTreeFromMat expects children to come after "
+                     "parents in input list.\n");
       }
       newNode->attachLeft(rimNodes[leftChildIndex]);
       newNode->attachRight(rimNodes[rightChildIndex]);
@@ -92,7 +91,7 @@ RIM::RIMTree* RIMTreeFromList(List rimNodesList) {
 }
 
 /***
- * Samples from the RIM represented by rimNodesList.
+ * Samples from the RIM represented by rimNodesMat.
  *
  * @param numSamplesVec the number of samples to draw.
  * @param rimNodesList see documentation for
@@ -101,42 +100,24 @@ RIM::RIMTree* RIMTreeFromList(List rimNodesList) {
  *         a single draw from the RIM.
  ***/
 // [[Rcpp::export]]
-NumericMatrix RCPPSampleFromRIM(NumericVector numSamplesVec, List rimNodesList) {
-  int numNodesTotal = rimNodesList.length();
-  int numLeafNodes = (numNodesTotal+1)/2; // Since #nodes in binary tree is 2*numLeaves-1
-
-  RIM::RIMTree* tree = RIMTreeFromList(rimNodesList); // The tree to sample from
+arma::mat RCPPSampleFromRIM(NumericVector numSamplesVec, arma::mat rimNodesMat) {
+  int numNodesTotal = rimNodesMat.n_rows;
+  int numLeafNodes = (numNodesTotal + 1) / 2; // Since #nodes in binary tree is 2*numLeaves-1
+  RIM::RIMTree* tree = RIMTreeFromMat(rimNodesMat); // The tree to sample from
 
   int numSamples = numSamplesVec[0];
-
-  NumericVector randsVector;
-  RIM::List<double>* rands;
-  NumericMatrix rankings(numSamples, numLeafNodes); // This will be the matrix of rankings returned
-  RIM::List<int>* ranking;
+  arma::mat rankings(numSamples, numLeafNodes); // This will be the matrix of rankings returned
+  arma::ivec ranking;
 
   // Run a loop numSamples times and generate a single
   // sample on each iteration.
-  for(int i=0; i < numSamples; i++) {
-    // Generate the random numbers that will be used to
-    // create the randon sample and save these numbers in
-    // a RIM::List.
-    randsVector = runif(numLeafNodes*(numLeafNodes - 1));
-    rands = new RIM::List<double>();
-    for(int j=0; j < numLeafNodes*(numLeafNodes - 1); j++) {
-      rands->appendValue(randsVector[j]);
-    }
-    // Using these random numbers generate a random ranking
-    // from the RIM.
-    ranking = tree->randomRanking(rands);
-
+  for(int i = 0; i < numSamples; i++) {
+    // Generate a random ranking from the RIM.
+    ranking = tree->randomRanking();
     // Add the random ranking to the matrix to be returned.
-    ranking->restart();
-    for(int j=0; j<numLeafNodes; j++) {
-      rankings(i,j) = ranking->currentValue();
-      ranking->next();
+    for(int j = 0; j < numLeafNodes; j++) {
+      rankings(i,j) = ranking(j);
     }
-    delete ranking;
-    delete rands;
   }
 
   delete tree;
@@ -147,34 +128,21 @@ NumericMatrix RCPPSampleFromRIM(NumericVector numSamplesVec, List rimNodesList) 
  * Creates the averaged discrepancy matrix correpsonding to the input samples
  * with respect to the reference permutation being the identity ranking.
  *
- * @param samples a NumericMatrix of rankings, each row
- *        should be a complete ranking.
- * @return the discrepancy matrix as a NumericMatrix.
+ * @param samples a NumericMatrix of rankings, each row should be a complete
+ *        ranking.
+ * @return the discrepancy matrix as a arma::mat.
  ***/
 // [[Rcpp::export]]
-NumericMatrix RCPPAverageDiscMatrix(NumericMatrix samples) {
-  int numLeaves = samples.ncol();
+arma::mat RCPPAverageDiscMatrix(arma::imat samples) {
+  int numLeaves = samples.n_cols;
 
-  // A matrix of integers that we will copy samples into, this is necessary
-  // as RIM::RIMTree::discrepancyMatix expects this format.
-  int* samplesMat = (int*) malloc(sizeof(int)*samples.nrow()*numLeaves);
-  for(int i=0; i<samples.nrow(); i++) {
-    for(int j=0; j<numLeaves; j++) {
-      samplesMat[i*numLeaves + j] = samples(i,j);
+  arma::imat discMat = RIM::RIMTree::discrepancyMatix(samples);
+  arma::mat aveDiscMat(numLeaves, numLeaves);
+  for(int i = 0; i < numLeaves; i++) {
+    for(int j = 0; j < numLeaves; j++) {
+      aveDiscMat(i,j) = (1.0 * discMat(i, j)) / samples.n_rows;
     }
   }
-
-  // Create the matrix and then put it back into a NumericMatrix form, also
-  // need to divide each entry by the number of samples to average them.
-  int* discMat = RIM::RIMTree::discrepancyMatix(samplesMat, samples.nrow(), numLeaves);
-  NumericMatrix aveDiscMat(numLeaves,numLeaves);
-  for(int i=0; i < numLeaves; i++) {
-    for(int j=0; j < numLeaves; j++) {
-      aveDiscMat(i,j) = (1.0*discMat[i*numLeaves + j])/samples.nrow();
-    }
-  }
-  free(discMat);
-  free(samplesMat);
   return(aveDiscMat);
 }
 
@@ -195,10 +163,14 @@ NumericMatrix RCPPAverageDiscMatrix(NumericMatrix samples) {
  *        StructByDPRIMTree.
  * @param thetas an nxn matrix of ML theta values created by StructByDPRIMTree.
  ***/
-void refRankingBackPointersAndThetasToRIMTreeHelper(int n, int* refRanking, RIM::RIMNode* curNode, int i, int j, int* backPointers, double* thetas) {
+void refRankingBackPointersAndThetasToRIMTreeHelper(const arma::ivec& refRanking,
+                                                    RIM::RIMNode* curNode,
+                                                    int i,
+                                                    int j,
+                                                    const arma::imat& backPointers,
+                                                    const arma::mat& thetas) {
   if(i > j) {
-    printf("ERROR: i must be <= j in refRankingBackPointersAndThetasToRIMTreeHelper.");
-    std::exit(1);
+    Rcpp::stop("ERROR: i must be <= j in refRankingBackPointersAndThetasToRIMTreeHelper.");
   } else if(i == j) {
     // Current node is a leaf, no more recursion to be done. Set the rank
     // of the current node to the appropriate value.
@@ -208,12 +180,12 @@ void refRankingBackPointersAndThetasToRIMTreeHelper(int n, int* refRanking, RIM:
   // Current node is an internal node. Set the theta value of the node,
   // use backPointers to determine the correct splitting of [i,j], and then
   // recurse.
-  curNode->theta = thetas[i*n + j];
-  int k = backPointers[i*n + j];
+  curNode->theta = thetas(i, j);
+  int k = backPointers(i, j);
   RIM::RIMNode* leftNode = new RIM::RIMNode(0,0);
   RIM::RIMNode* rightNode = new RIM::RIMNode(0,0);
-  refRankingBackPointersAndThetasToRIMTreeHelper(n, refRanking, leftNode, i, k, backPointers, thetas);
-  refRankingBackPointersAndThetasToRIMTreeHelper(n, refRanking, rightNode, k + 1, j, backPointers, thetas);
+  refRankingBackPointersAndThetasToRIMTreeHelper(refRanking, leftNode, i, k, backPointers, thetas);
+  refRankingBackPointersAndThetasToRIMTreeHelper(refRanking, rightNode, k + 1, j, backPointers, thetas);
   curNode->attachLeft(leftNode);
   curNode->attachRight(rightNode);
 }
@@ -232,33 +204,24 @@ void refRankingBackPointersAndThetasToRIMTreeHelper(int n, int* refRanking, RIM:
  * @return a RIM::RIMTree corresponding to the ML tree found by
  *         StructByDPRIMTree.
  ***/
-RIM::RIMTree* refRankingBackPointersAndThetasToRIMTree(int n, int* refRanking, int* backPointers, double* thetas) {
+RIM::RIMTree* refRankingBackPointersAndThetasToRIMTree(
+    int n, const arma::ivec& refRanking, const arma::imat& backPointers,
+    const arma::mat& thetas) {
   // Set up the root node and then use the helper function to construct the tree.
   RIM::RIMNode* root = new RIM::RIMNode(0,0);
-  refRankingBackPointersAndThetasToRIMTreeHelper(n, refRanking, root, 0, n - 1, backPointers, thetas);
+  refRankingBackPointersAndThetasToRIMTreeHelper(refRanking, root, 0, n - 1, backPointers, thetas);
   return(new RIM::RIMTree(root));
 }
 
 /***
- * Takes an input RIM tree and outputs a NumericMatrix representing the tree.
- * The formatting is exactly the same as the input list to RIMTreeFromList
- * except that the rows of the outputted matrix correspond to the entries of the
- * list from RIMTreeFromList.
+ * Takes an input RIM tree and outputs a matrix representing the tree.
+ * The formatting is exactly the same as the input list to RIMTreeFromMat.
  *
- * @param tree the input RIM tree to convert into a NumericMatrix.
- * @return a NumericMatrix representing the input tree.
+ * @param tree the input RIM tree to convert into a matrix.
+ * @return a matrix representing the input tree.
  ***/
-NumericMatrix RIMTreeToMatrix(RIM::RIMTree* tree) {
-  double* treeMatrix = tree->treeToMatrix();
-  int numLeaves = tree->getNumLeaves();
-  NumericMatrix treeMatrixNumeric(2*numLeaves - 1, 5);
-  for(int i=0; i < 2*numLeaves - 1; i++) {
-    for(int j=0; j < 5; j++) {
-      treeMatrixNumeric(i,j) = treeMatrix[i*5 + j];
-    }
-  }
-  free(treeMatrix);
-  return(treeMatrixNumeric);
+arma::mat RIMTreeToMatrix(RIM::RIMTree* tree) {
+  return(tree->treeToMatrix());
 }
 
 /***
@@ -270,16 +233,19 @@ NumericMatrix RIMTreeToMatrix(RIM::RIMTree* tree) {
  *        This should be created by the function RCPPAverageDiscMatrix.
  * @param refRanking an integer array of length equaling the number of items
  *        being ranked (i.e. the number of rows/columns of aveDiscMatrix).
- * @param makeCanonical if true then the algorithmenforces that the output
+ * @param makeCanonical if true then the algorithm forces that the output
  *        tree is in canonical form (no internal nodes are negative).
  * @return the ML RIM tree corresponding to the input discrepancy matrix given
  *         the known reference ranking.
  ***/
-RIM::RIMTree* StructByDPRIMTree(NumericMatrix aveDiscMatrix, int* refRanking, bool makeCanonical) {
-  int n = aveDiscMatrix.ncol();
-  double* costMatrix = (double*) calloc(n*n, sizeof(double));
-  int* backPointers = (int*) calloc(n*n, sizeof(int));
-  double* thetas = (double*) calloc(n*n, sizeof(double));
+RIM::RIMTree* StructByDPRIMTree(
+    arma::mat aveDiscMatrix, const arma::ivec& refRanking, bool makeCanonical) {
+
+  int n = aveDiscMatrix.n_cols;
+
+  arma::mat costMatrix = arma::zeros<arma::mat>(n, n);
+  arma::imat backPointers = arma::zeros<arma::imat>(n, n);
+  arma::mat thetas = arma::zeros<arma::mat>(n, n);
 
   int m, L, R;
   double aveV = 0;
@@ -288,19 +254,19 @@ RIM::RIMTree* StructByDPRIMTree(NumericMatrix aveDiscMatrix, int* refRanking, bo
   int indMin, indMax;
   // A direct translation of the StructByDP algorithm from the paper of
   // Meek and Meila (2014). See the paper for justification and explaination.
-  for(int l=2; l <= n; l++) {
-    for(int j=1; j <= n - l + 1; j++) {
+  for (int l = 2; l <= n; l++) {
+    for (int j = 1; j <= n - l + 1; j++) {
       m = j + l - 1;
-      costMatrix[(j-1)*n + (m-1)] = std::numeric_limits<double>::max();
-      for(int k=j; k <= m-1; k++) {
+      costMatrix(j - 1, m - 1) = std::numeric_limits<double>::max();
+      for (int k = j; k <= m - 1; k++) {
         // Calculating average disc
         aveV = 0;
-        for(int j1=j; j1 <= k; j1++) {
-          for(int m1=k+1; m1 <= m; m1++) {
-            if(refRanking[j1-1] < refRanking[m1-1]) {
-              aveV += aveDiscMatrix(refRanking[m1-1], refRanking[j1-1]);
+        for(int j1 = j; j1 <= k; j1++) {
+          for(int m1 = k + 1; m1 <= m; m1++) {
+            if(refRanking[j1 - 1] < refRanking[m1 - 1]) {
+              aveV += aveDiscMatrix(refRanking[m1 - 1], refRanking[j1 - 1]);
             } else {
-              aveV += 1 - aveDiscMatrix(refRanking[j1-1], refRanking[m1-1]);
+              aveV += 1 - aveDiscMatrix(refRanking[j1 - 1], refRanking[m1 - 1]);
             }
           }
         }
@@ -308,30 +274,30 @@ RIM::RIMTree* StructByDPRIMTree(NumericMatrix aveDiscMatrix, int* refRanking, bo
         R = m - k;
         // These values for theta should probably not be hard coded.
         theta = RIM::RIMTree::mlTheta(L, R, aveV, 0, 200, .00001);
-        s = costMatrix[(j-1)*n + (k-1)] + costMatrix[k*n + (m-1)] + RIM::RIMTree::score(L, R, aveV, theta);
-        if(s < costMatrix[(j-1)*n+(m-1)]) {
-          costMatrix[(j-1)*n + (m-1)] = s;
-          backPointers[(j-1)*n + (m-1)] = k - 1; // Added -1 here
-          thetas[(j-1)*n + (m-1)] = theta;
+        s = costMatrix(j - 1, k - 1) + costMatrix(k, m - 1) +
+          RIM::RIMTree::score(L, R, aveV, theta);
+        if(s < costMatrix(j - 1, m - 1)) {
+          costMatrix(j - 1, m - 1) = s;
+          backPointers(j - 1, m - 1) = k - 1; // Added -1 here
+          thetas(j - 1, m - 1) = theta;
         }
       }
     }
   }
 
   // Convert the output of the above loop into a RIM tree.
-  RIM::RIMTree* tree = refRankingBackPointersAndThetasToRIMTree(n, refRanking, backPointers, thetas);
+  RIM::RIMTree* tree = refRankingBackPointersAndThetasToRIMTree(n, refRanking,
+                                                                backPointers,
+                                                                thetas);
   if(makeCanonical) {
     tree->transformToCanonical();
   }
-  free(costMatrix);
-  free(backPointers);
-  free(thetas);
   return(tree);
 }
 
 /***
  * An implementation of the StructByDP algorithm presented by Meek and Meila
- * (2014). Creates a NumericMatrix representing the ML RIM tree structure
+ * (2014). Creates a matrix representing the ML RIM tree structure
  * given the reference ranking (i.e. the ordering of the leaves of the tree).
  * For how this matrix is formatted see RIMTreeToMatrix.
  *
@@ -341,55 +307,15 @@ RIM::RIMTree* StructByDPRIMTree(NumericMatrix aveDiscMatrix, int* refRanking, bo
  *        being ranked (i.e. the number of rows/columns of aveDiscMatrix).
  * @param makeCanonical if true then the algorithmenforces that the output
  *        tree is in canonical form (no internal nodes are negative).
- * @return a NumericMatrix representing ML RIM tree corresponding to the input
+ * @return a matrix representing ML RIM tree corresponding to the input
  *         discrepancy matrix given the known reference ranking. See
  *         the function RIMTreeToMatrix for how this matrix is formatted.
  ***/
 // [[Rcpp::export]]
-NumericMatrix RCPPStructByDP(NumericMatrix aveDiscMatrix, NumericVector refRanking, bool makeCanonical) {
-  // Convert in input NumericVector refRanking to an int* as this is what
-  // is expected by StructByDPRIMTree.
-  int* refRankingArray = (int*) malloc(sizeof(int)*aveDiscMatrix.ncol());
-  for(int i=0; i < aveDiscMatrix.ncol(); i++) {
-    refRankingArray[i] = refRanking[i];
-  }
-  RIM::RIMTree* tree = StructByDPRIMTree(aveDiscMatrix, refRankingArray, makeCanonical);
-  NumericMatrix treeMatrix = RIMTreeToMatrix(tree);
-  free(refRankingArray);
-  delete tree;
-  return(treeMatrix);
-}
-
-/***
- * Samples one ranking from the input RIM tree and inserts this ranking
- * into the input array rankingArray.
- *
- * @param tree the RIM tree to sample from.
- * @param rankingArray an int array of size the number of items being ranked
- *        (i.e. the number of leaves of the tree) which will be modified so that
- *        it corresponds to the ranking samples from the tree.
- ***/
-void sampleOneFromRIMTree(RIM::RIMTree* tree, int* rankingArray) {
-  int numLeafNodes = tree->getNumLeaves();
-  RIM::List<int>* ranking;
-  // In order to get a random ranking we must pass in an array of random values,
-  // we create this array here.
-  RIM::List<double>* rands = new RIM::List<double>();
-  NumericVector randsVector = runif(numLeafNodes*(numLeafNodes - 1));
-  for(int j=0; j < numLeafNodes*(numLeafNodes - 1); j++) {
-    rands->appendValue(randsVector[j]);
-  }
-  // Create the random ranking.
-  ranking = tree->randomRanking(rands);
-  ranking->restart();
-
-  // Insert the ranking into the array.
-  for(int i=0; i < ranking->length(); i++) {
-    rankingArray[i] = ranking->currentValue();
-    ranking->next();
-  }
-  delete rands;
-  delete ranking;
+arma::mat RCPPStructByDP(arma::mat aveDiscMatrix, arma::ivec refRanking,
+                             bool makeCanonical) {
+  RIM::RIMTree* tree = StructByDPRIMTree(aveDiscMatrix, refRanking, makeCanonical);
+  return(RIMTreeToMatrix(tree));
 }
 
 /***
@@ -413,51 +339,36 @@ void sampleOneFromRIMTree(RIM::RIMTree* tree, int* rankingArray) {
  *         matrix See the function RIMTreeToMatrix for how this matrix is formatted.
  ***/
 // [[Rcpp::export]]
-NumericMatrix RCPPSASearch(NumericMatrix aveDiscMatrix, NumericVector refRanking, double inverseTemp, int maxIter, bool makeCanonical, bool verbose) {
-  int numLeafNodes = aveDiscMatrix.nrow();
-  // We will require the reference ranking to be a int vector so we put it in
-  // that form now.
-  int* ranking = (int*) malloc(sizeof(int)*numLeafNodes);
-  for(int i=0; i < numLeafNodes; i++) {
-     ranking[i] = refRanking[i];
-  }
+arma::mat RCPPSASearch(arma::mat aveDiscMatrix, arma::ivec refRanking,
+                           double inverseTemp, int maxIter, bool makeCanonical,
+                           bool verbose) {
+  int numLeafNodes = aveDiscMatrix.n_rows;
 
-  // We will require that the aveDiscMatrix is a matrix of doubles, we transform
-  // it into this form.
-  double* aveDiscMatrixAsDouble = (double*) malloc(sizeof(double)*numLeafNodes*numLeafNodes);
-  for(int i=0; i < numLeafNodes; i++) {
-    for(int j=0; j < numLeafNodes; j++) {
-      aveDiscMatrixAsDouble[i*numLeafNodes + j] = aveDiscMatrix(i,j);
-    }
-  }
-
-// Create the first tree from the input ranking.
-  RIM::RIMTree* curTree = StructByDPRIMTree(aveDiscMatrix, ranking, makeCanonical);
+  // Create the first tree from the input ranking.
+  RIM::RIMTree* curTree = StructByDPRIMTree(aveDiscMatrix, refRanking, makeCanonical);
   RIM::RIMTree* tmpTree;
   RIM::RIMTree* bestTree = curTree;
 
-  double lastLogProb = curTree->logProbability(aveDiscMatrixAsDouble);
+  double lastLogProb = curTree->logProbability(aveDiscMatrix);
   double bestLogProb = lastLogProb;
   double tmpLogProb;
   double rand;
   int runsBeforeAcceptance = 1;
   // The loop here is a direct translation of the algorithm SASearch of Meek and
   // Meila (2014), see the paper for more detail.
-  for(int t=1; t <= maxIter; t++) {
-    if(verbose && (t % 100) == 0) {
+  for (int t = 1; t <= maxIter; t++) {
+    if (verbose && (t % 100) == 0) {
       Rprintf("t=%d\n", t);
       Rprintf("Average runs before acceptance in last 100=%f\n", runsBeforeAcceptance/100.0);
       runsBeforeAcceptance = 0;
     }
-    while(true) {
+    while (true) {
       runsBeforeAcceptance++;
-      sampleOneFromRIMTree(curTree, ranking);
+      arma::ivec ranking = curTree->randomRanking();
       tmpTree = StructByDPRIMTree(aveDiscMatrix, ranking, makeCanonical);
-      free(ranking);
       ranking = tmpTree->refRankingArray();
-      delete tmpTree;
       tmpTree = StructByDPRIMTree(aveDiscMatrix, ranking, makeCanonical);
-      tmpLogProb = tmpTree->logProbability(aveDiscMatrixAsDouble);
+      tmpLogProb = tmpTree->logProbability(aveDiscMatrix);
       rand = (runif(1))[0];
       if(exp(-inverseTemp*(lastLogProb - tmpLogProb)) > rand) {
         if(bestTree != curTree) {
@@ -478,14 +389,11 @@ NumericMatrix RCPPSASearch(NumericMatrix aveDiscMatrix, NumericVector refRanking
       bestLogProb = lastLogProb;
     }
   }
-  free(ranking);
-  free(aveDiscMatrixAsDouble);
 
-  ranking = bestTree->refRankingArray();
+  arma::ivec ranking = bestTree->refRankingArray();
   tmpTree = StructByDPRIMTree(aveDiscMatrix, ranking, makeCanonical);
 
-  NumericMatrix treeMatrix = RIMTreeToMatrix(tmpTree);
-  free(ranking);
+  arma::mat treeMatrix = RIMTreeToMatrix(tmpTree);
   delete tmpTree;
   if(bestTree == curTree) {
     delete bestTree;
@@ -502,54 +410,39 @@ NumericMatrix RCPPSASearch(NumericMatrix aveDiscMatrix, NumericVector refRanking
  *
  * @param aveDiscMatrix the average discrepancy matrix corresponding to data.
  *        This should be created by the function RCPPAverageDiscMatrix.
- * @param rimNodeList see the function RIMTreeFromList for the appropriate
- *        formatting of this list.
+ * @param rimNodeMat see the function RIMTreeFromMat for the appropriate
+ *        formatting of this matrix.
  * @return the log probability of the tree given the data.
  ***/
 // [[Rcpp::export]]
-double RCPPLogProbRIM(List rimNodesList, NumericMatrix aveDiscMatrix) {
+double RCPPLogProbRIM(arma::mat rimNodesMat, arma::mat aveDiscMatrix) {
   // We require that the aveDiscMatrix is a matrix of doubles, we transform
   // it into this form.
-  int numLeafNodes = aveDiscMatrix.nrow();
-  double* aveDiscMatrixAsDouble = (double*) malloc(sizeof(double)*numLeafNodes*numLeafNodes);
-  for(int i=0; i < numLeafNodes; i++) {
-    for(int j=0; j < numLeafNodes; j++) {
-      aveDiscMatrixAsDouble[i*numLeafNodes + j] = aveDiscMatrix(i,j);
-    }
-  }
-  RIM::RIMTree* tree = RIMTreeFromList(rimNodesList);
-  double logProb = tree->logProbability(aveDiscMatrixAsDouble);
+  int numLeafNodes = aveDiscMatrix.n_rows;
+  RIM::RIMTree* tree = RIMTreeFromMat(rimNodesMat);
+  double logProb = tree->logProbability(aveDiscMatrix);
 
   delete tree;
-  free(aveDiscMatrixAsDouble);
   return(logProb);
 }
 
 /***
- * Takes an input averaged discrepancy matrix (from the data), and a RIM as a list
- * (see RIMTreeFromList for how this list should be formatted) and outputs a
- * NumericMatrix of the tree with theta values equalling the MLE theta values
+ * Takes an input averaged discrepancy matrix (from the data), and a RIM as a matrix
+ * (see RIMTreeFromMat for how this matrix should be formatted) and outputs a
+ * matrix of the tree with theta values equalling the MLE theta values
  * for the data.
  *
- * @param rimNodesList a list representing the RIM tree.
+ * @param rimNodesMat a matrix representing the RIM tree.
  * @param aveDiscMatrix an averaged discrepancy matrix from the data.
  * @return a NumericMatrix representing the RIM tree with optimized theta values.
  ***/
 // [[Rcpp::export]]
-NumericMatrix RCPPthetaMLERIM(List rimNodesList, NumericMatrix aveDiscMatrix) {
-  int numLeafNodes = aveDiscMatrix.ncol();
-  double* aveDiscMatrixAsDouble = (double*) malloc(sizeof(double)*numLeafNodes*numLeafNodes);
-  for(int i=0; i < numLeafNodes; i++) {
-    for(int j=0; j < numLeafNodes; j++) {
-      aveDiscMatrixAsDouble[i*numLeafNodes + j] = aveDiscMatrix(i,j);
-    }
-  }
+arma::mat RCPPthetaMLERIM(arma::mat rimNodesMat, arma::mat aveDiscMatrix) {
 
-  RIM::RIMTree* tree = RIMTreeFromList(rimNodesList);
-  tree->mlThetaTree(aveDiscMatrixAsDouble);
+  RIM::RIMTree* tree = RIMTreeFromMat(rimNodesMat);
+  tree->mlThetaTree(aveDiscMatrix);
 
-  NumericMatrix treeMat = RIMTreeToMatrix(tree);
+  arma::mat treeMat = RIMTreeToMatrix(tree);
   delete tree;
-  free(aveDiscMatrixAsDouble);
   return(treeMat);
 }

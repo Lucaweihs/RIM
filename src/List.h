@@ -1,7 +1,25 @@
+/***
+ * Copyright (C) 2016 Luca Weihs
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #ifndef RIM_List
 #define RIM_List
 
-#include"ListNode.cpp"
+#include "RcppArmadillo.h"
+#include"ListNode.h"
 #include<cstdlib>
 
 namespace RIM {
@@ -11,6 +29,10 @@ namespace RIM {
       ListNode<T>* sentinal;
       ListNode<T>* current;
       int listLength;
+
+      // We disable copying by making this function private and providing
+      // no implementation
+      List(const List& that);
 
     public:
       List() {
@@ -60,8 +82,7 @@ namespace RIM {
 
       T firstValue() {
         if(length() == 0) {
-          printf("\nERROR: Attempting to get first value of empty list.\n");
-          std::exit(1);
+          Rcpp::stop("Attempting to get first value of empty list.\n");
         }
         return(sentinal->next->value);
       }
@@ -75,26 +96,39 @@ namespace RIM {
 
       T lastValue() {
         if(length() == 0) {
-          printf("\nERROR: Attempting to get last value of empty list.\n");
-          std::exit(1);
+          Rcpp::stop("Attempting to get last value of empty list.\n");
         }
         return(sentinal->prev->value);
       }
 
       ListNode<T>* currentNode() {
-        if(length() == 0) {
-          printf("\nERROR: Attempting to get current node of empty list.\n");
-          std::exit(1);
+        if (length() == 0) {
+          Rcpp::stop("Attempting to get current node of empty list.\n");
         }
         return(current);
       }
 
       T currentValue() {
-        if(length() == 0) {
-          printf("\nERROR: Attempting to get current value of empty list.\n");
-          std::exit(1);
+        if (length() == 0) {
+          Rcpp::stop("Attempting to get current value of empty list.\n");
         }
         return(current->value);
+      }
+
+      void removeCurrent() {
+        if (length() == 0) {
+          Rcpp::stop("Attempting to remove current node of empty list.\n");
+        }
+        if (current == sentinal) {
+          Rcpp::stop("Attempting to remove sentinal, this shouldn't be possible.\n");
+        }
+        ListNode<T>* prev = current->prev;
+        ListNode<T>* next = current->next;
+        delete current;
+        prev->next = next;
+        next->prev = prev;
+        current = prev;
+        listLength--;
       }
 
       void appendNode(ListNode<T>* listNode) {
@@ -106,8 +140,7 @@ namespace RIM {
       }
 
       void appendValue(T value) {
-        ListNode<T>* listNode = new ListNode<T>(value);
-        appendNode(listNode);
+        appendNode(new ListNode<T>(value));
       }
 
       void insertNodeAfterCurrent(ListNode<T>* listNode) {
@@ -126,10 +159,24 @@ namespace RIM {
         listLength += 1;
       }
 
+      void extend(List<T>* listToAppend) {
+        ListNode<T>* otherSentinal = listToAppend->sentinal;
+        ListNode<T>* otherCurrent = otherSentinal->next;
+        ListNode<T>* otherNext = otherSentinal->next;
+        while (otherCurrent != otherSentinal) {
+          otherNext = otherCurrent->next;
+          appendNode(otherCurrent);
+          otherCurrent = otherNext;
+        }
+
+        otherSentinal->next = otherSentinal;
+        otherSentinal->prev = otherSentinal;
+        listToAppend->listLength = 0;
+      }
+
       void joinWithPartition(List<T>* listToMerge, List<int>* partition) {
         if(partition->length() > listToMerge->length()) {
-          printf("\nERROR: Attempting merge two lists with a partition that is too long.\n");
-          std::exit(1);
+          Rcpp::stop("Attempting merge two lists with a partition that is too long.\n");
         }
         partition->restart();
         this->restart();

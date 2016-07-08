@@ -1,11 +1,15 @@
 Package: RIM
 Type: Package
-Title: What the package does (short line)
-Version: 1.0
-Date: 2015-04-05
+Title: Inference with Recursive Inversion Models
+Version: 1.1
+Date: 2016-02-21
 Author: Luca Weihs
 Maintainer: Luca Weihs <lucaw@uw.edu>
-Description: More about what it does (maybe more than one line)
+Description: Perform inference with Recursive Inversion Models (RIMs) for ranked
+             data.
 License: GPL (>= 2)
-Imports: Rcpp (>= 0.11.4)
-LinkingTo: Rcpp
+Depends: igraph
+Imports: Rcpp (>= 0.11.4), igraph (>= 1.0.1)
+LinkingTo: Rcpp, RcppArmadillo, TauStar
+Suggests:
+    testthat
