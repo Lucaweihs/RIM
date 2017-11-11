@@ -10,7 +10,7 @@ A RIM tree structure is encoded using a matrix of a special form. In particular 
 * rank = the rank of the node (for leaves) left/right child #s and theta are ignored if the node is a leaf and rank is ignored if the node is not a leaf. 
 Note that the matrix should be ordered topologically so that PARENTS ALWAYS COME BEFORE CHILDREN. As an example the matrix:
 
-```
+```R
 matrix(c(1, 2, 0, -.1, 0,
          3, 4, 0, 0.8, 0,
          5, 6, 0, 1.6, 0,
@@ -24,7 +24,7 @@ corresponds to a tree with a root node 0, the root having left and right childre
 
 The below will give an example of how to install the RIM package as well as how to create, sample from, and estimate a RIM from data.
 
-```
+```R
 # Install the RIM package from github, you’ll need to have already
 # installed the devtools package from CRAN.
 devtools::install_github("Lucaweihs/RIM")
