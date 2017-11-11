@@ -8,6 +8,7 @@ A RIM tree structure is encoded using a matrix of a special form. In particular 
 * is leaf boolean = 1 if the node is a leaf, 0 otherwise
 * theta = the theta value corresponding to the node (for internal nodes)
 * rank = the rank of the node (for leaves) left/right child #s and theta are ignored if the node is a leaf and rank is ignored if the node is not a leaf. 
+
 Note that the matrix should be ordered topologically so that PARENTS ALWAYS COME BEFORE CHILDREN. As an example the matrix:
 
 ```R
